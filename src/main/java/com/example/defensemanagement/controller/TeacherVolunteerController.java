@@ -1,14 +1,19 @@
 package com.example.defensemanagement.controller;
 
+import com.example.defensemanagement.common.MatchScoreDetail;
+import com.example.defensemanagement.common.RelevanceAnalysisResult;
 import com.example.defensemanagement.entity.Student;
 import com.example.defensemanagement.entity.StudentPreference;
 import com.example.defensemanagement.entity.Teacher;
+import com.example.defensemanagement.entity.TeacherProfile;
 import com.example.defensemanagement.entity.User;
 import com.example.defensemanagement.mapper.StudentMapper;
 import com.example.defensemanagement.mapper.StudentPreferenceMapper;
 import com.example.defensemanagement.mapper.TeacherMapper;
+import com.example.defensemanagement.mapper.TeacherProfileMapper;
 import com.example.defensemanagement.service.ConfigService;
 import com.example.defensemanagement.service.StudentService;
+import com.example.defensemanagement.service.VolunteerMatchService;
 import com.example.defensemanagement.service.impl.ConfigServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -51,6 +56,12 @@ public class TeacherVolunteerController {
 
     @Autowired
     private ConfigService configService;
+
+    @Autowired
+    private TeacherProfileMapper teacherProfileMapper;
+
+    @Autowired
+    private VolunteerMatchService volunteerMatchService;
 
     private Teacher getCurrentTeacher(HttpSession session) {
         Teacher currentTeacher = (Teacher) session.getAttribute("currentTeacher");
@@ -150,11 +161,15 @@ public class TeacherVolunteerController {
         int assigned = studentMapper.countByAdvisorAndYear(teacher.getId(), year);
         boolean deadlinePassed = isDeadlinePassed();
         Integer currentRound = getCurrentRound();
+        int remaining = Math.max(0, maxStudents - assigned);
+        TeacherProfile teacherProfile = teacherProfileMapper.findByTeacherId(teacher.getId());
+        Map<String, RelevanceAnalysisResult> relevanceCache = new HashMap<>();
 
         List<Map<String, Object>> list = new ArrayList<>();
         for (Map<String, Object> r : rows) {
             Map<String, Object> item = new HashMap<>();
-            item.put("studentId", r.get("student_id"));
+            Long studentId = getLong(r.get("student_id"));
+            item.put("studentId", studentId);
             item.put("studentNo", r.get("student_no"));
             item.put("studentName", r.get("student_name"));
             item.put("classInfo", r.get("class_info"));
@@ -185,8 +200,30 @@ public class TeacherVolunteerController {
             item.put("assignedToSomeone", assignedToSomeone);
             item.put("canAccept", canAccept);
             item.put("canCancel", canCancel);
+
+            if (studentId != null) {
+                Student student = studentMapper.findById(studentId);
+                StudentPreference preference = studentPreferenceMapper.findByStudentIdAndYear(studentId, year);
+                MatchScoreDetail matchDetail = volunteerMatchService.calculateMatchDetail(preference, student, teacher,
+                        teacherProfile, remaining, assigned, maxStudents, relevanceCache);
+                item.put("matchScore", Math.round(matchDetail.getTotalScore() * 100.0) / 100.0);
+                item.put("relevanceScore", Math.round(matchDetail.getRelevanceScore() * 100.0) / 100.0);
+                item.put("relevanceSource", matchDetail.getRelevanceSource());
+                item.put("relevanceReason", matchDetail.getRelevanceReason());
+                item.put("materialSource", matchDetail.getMaterialSource());
+                item.put("materialReason", matchDetail.getMaterialReason());
+            } else {
+                item.put("matchScore", 0.0);
+                item.put("relevanceScore", 0.0);
+                item.put("relevanceSource", RelevanceAnalysisResult.SOURCE_EMPTY_INPUT);
+                item.put("relevanceReason", "student_id_missing");
+                item.put("materialSource", "EMPTY");
+                item.put("materialReason", "student_id_missing");
+            }
             list.add(item);
         }
+
+        list.sort((a, b) -> Double.compare(getDouble(b.get("matchScore")), getDouble(a.get("matchScore"))));
 
         result.put("year", year);
         result.put("round", round);
@@ -356,5 +393,31 @@ public class TeacherVolunteerController {
         } catch (Exception e) {
             return ResponseEntity.status(500).build();
         }
+    }
+
+    private Long getLong(Object value) {
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
+        }
+        if (value instanceof String) {
+            try {
+                return Long.parseLong(((String) value).trim());
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return null;
+    }
+
+    private double getDouble(Object value) {
+        if (value instanceof Number) {
+            return ((Number) value).doubleValue();
+        }
+        if (value instanceof String) {
+            try {
+                return Double.parseDouble(((String) value).trim());
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return 0.0;
     }
 }

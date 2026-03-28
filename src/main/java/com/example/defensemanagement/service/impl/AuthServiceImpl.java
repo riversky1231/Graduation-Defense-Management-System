@@ -7,6 +7,8 @@ import com.example.defensemanagement.mapper.UserMapper;
 import com.example.defensemanagement.mapper.TeacherMapper;
 import com.example.defensemanagement.mapper.DefenseLeaderMapper;
 import com.example.defensemanagement.service.AuthService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -15,6 +17,8 @@ import java.time.LocalDate;
 
 @Service
 public class AuthServiceImpl implements AuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthServiceImpl.class);
 
     @Autowired
     private UserMapper userMapper;
@@ -29,29 +33,19 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public User login(String username, String password) {
-        System.out.println("尝试用户登录: " + username);
         User user = userMapper.findByUsername(username);
-        System.out.println("查找到的用户: " + user);
 
-        if (user != null) {
-            System.out.println("用户状态: " + user.getStatus());
-            System.out.println("存储的密码: " + user.getPassword());
-            System.out.println("输入的密码: " + password);
-
-            if (user.getStatus() == 1) {
-                boolean matches = passwordEncoder.matches(password, user.getPassword());
-                System.out.println("密码匹配结果: " + matches);
-                if (matches) {
-                    return user;
-                }
-                // 兼容初始化数据的默认管理员密码，如匹配失败但输入为默认口令，则自动重写为最新 bcrypt
-                if ("admin".equals(username) && "123456".equals(password)) {
-                    String encodedPassword = passwordEncoder.encode(password);
-                    userMapper.updatePassword(user.getId(), encodedPassword);
-                    user.setPassword(encodedPassword);
-                    System.out.println("已自动重置 admin 密码哈希为最新 bcrypt");
-                    return user;
-                }
+        if (user != null && Integer.valueOf(1).equals(user.getStatus()) && user.getPassword() != null) {
+            if (passwordEncoder.matches(password, user.getPassword())) {
+                return user;
+            }
+            // 兼容初始化数据的默认管理员密码，如匹配失败但输入为默认口令，则自动重写为最新 bcrypt
+            if ("admin".equals(username) && "123456".equals(password)) {
+                String encodedPassword = passwordEncoder.encode(password);
+                userMapper.updatePassword(user.getId(), encodedPassword);
+                user.setPassword(encodedPassword);
+                log.warn("Admin password hash was upgraded during login for username={}", username);
+                return user;
             }
         }
         return null;
@@ -59,11 +53,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public Teacher teacherLogin(String teacherNo, String password) {
-        System.out.println("尝试教师登录: " + teacherNo);
         Teacher teacher = teacherMapper.findByTeacherNo(teacherNo);
-        System.out.println("查找到的教师: " + teacher);
 
-        if (teacher != null && teacher.getStatus() == 1 &&
+        if (teacher != null && Integer.valueOf(1).equals(teacher.getStatus()) &&
                 teacher.getPassword() != null && passwordEncoder.matches(password, teacher.getPassword())) {
             return teacher;
         }
@@ -72,27 +64,18 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public boolean changeUserPassword(Long userId, String oldPassword, String newPassword) {
-        System.out.println("changeUserPassword: userId=" + userId);
         User user = userMapper.findById(userId);
         if (user == null) {
-            System.out.println("用户不存在: userId=" + userId);
             return false;
         }
-        System.out.println("找到用户: " + user.getUsername());
-        
+
         if (user.getPassword() == null) {
-            System.out.println("用户密码为空，无法验证旧密码");
             return false;
         }
-        
-        boolean passwordMatches = passwordEncoder.matches(oldPassword, user.getPassword());
-        System.out.println("密码匹配结果: " + passwordMatches);
-        
-        if (passwordMatches) {
+
+        if (passwordEncoder.matches(oldPassword, user.getPassword())) {
             String encodedPassword = passwordEncoder.encode(newPassword);
-            int updateResult = userMapper.updatePassword(userId, encodedPassword);
-            System.out.println("密码更新结果: " + updateResult);
-            return updateResult > 0;
+            return userMapper.updatePassword(userId, encodedPassword) > 0;
         }
         return false;
     }

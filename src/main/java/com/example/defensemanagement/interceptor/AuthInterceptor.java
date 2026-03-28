@@ -156,17 +156,20 @@ public class AuthInterceptor implements HandlerInterceptor {
                 
                 // 答辩组长专用接口：允许答辩组长访问
                 if (path.startsWith("/department/student/leader/")) {
-                    // 检查是否是教师（通过 currentTeacher 或 currentUser 的角色）
                     if (currentTeacher != null) {
-                        return true;
+                        if (authService.isDefenseLeader(currentTeacher.getId(), null)) {
+                            return true;
+                        }
+                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "需要答辩组长权限");
+                        return false;
                     }
                     if (currentUser != null && currentUser.getRole() != null) {
                         String roleName = currentUser.getRole().getName();
-                        if ("TEACHER".equals(roleName) || "DEFENSE_LEADER".equals(roleName) || "SUPER_ADMIN".equals(roleName)) {
+                        if ("DEFENSE_LEADER".equals(roleName) || "SUPER_ADMIN".equals(roleName)) {
                             return true;
                         }
                     }
-                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "需要教师权限");
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "需要答辩组长权限");
                     return false;
                 }
                 

@@ -12,6 +12,8 @@ import com.example.defensemanagement.mapper.StudentMapper;
 import com.example.defensemanagement.mapper.DefenseGroupMapper;
 import com.example.defensemanagement.entity.Student;
 import com.example.defensemanagement.entity.DefenseGroup;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.HttpStatus;
@@ -25,6 +27,8 @@ import java.util.HashMap;
 @RestController
 @RequestMapping("/defense/score")
 public class ScoreController {
+
+    private static final Logger log = LoggerFactory.getLogger(ScoreController.class);
 
     @Autowired
     private ScoreService scoreService;
@@ -573,28 +577,29 @@ public class ScoreController {
         // 先尝试从 session 获取教师
         Teacher teacher = (Teacher) session.getAttribute("currentTeacher");
         if (teacher != null) {
-            System.out.println("[小组打分] 从 session 获取到 currentTeacher: " + teacher.getName());
+            log.debug("Resolved teacher from currentTeacher session attribute, teacherId={}", teacher.getId());
             return teacher;
         }
         
         // 如果是 User 登录，检查是否是教师角色
         User user = (User) session.getAttribute("currentUser");
-        System.out.println("[小组打分] currentUser: " + (user != null ? user.getUsername() : "null"));
+        log.debug("Resolving teacher from currentUser session attribute, username={}", user != null ? user.getUsername() : null);
         if (user != null) {
-            System.out.println("[小组打分] user.getRole(): " + user.getRole());
             if (user.getRole() != null) {
                 String roleName = user.getRole().getName();
-                System.out.println("[小组打分] roleName: " + roleName);
+                log.debug("Current user role for teacher resolution={}", roleName);
                 if ("TEACHER".equals(roleName) || "DEFENSE_LEADER".equals(roleName)) {
                     // 根据 username 查找对应的教师
                     teacher = teacherMapper.findByTeacherNo(user.getUsername());
-                    System.out.println("[小组打分] 根据 username " + user.getUsername() + " 查找到教师: " + (teacher != null ? teacher.getName() : "null"));
+                    log.debug("Resolved teacher by username={}, teacherId={}",
+                            user.getUsername(),
+                            teacher != null ? teacher.getId() : null);
                     return teacher;
                 }
             }
         }
         
-        System.out.println("[小组打分] 无法获取教师信息");
+        log.warn("Unable to resolve teacher from session");
         return null;
     }
 

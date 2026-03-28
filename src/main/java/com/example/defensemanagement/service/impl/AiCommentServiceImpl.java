@@ -1,7 +1,10 @@
 package com.example.defensemanagement.service.impl;
 
+import com.example.defensemanagement.common.RelevanceAnalysisResult;
 import com.example.defensemanagement.service.AiCommentService;
 import com.example.defensemanagement.service.ConfigService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -29,6 +32,7 @@ import java.util.function.Consumer;
 @Service
 public class AiCommentServiceImpl implements AiCommentService {
 
+    private static final Logger log = LoggerFactory.getLogger(AiCommentServiceImpl.class);
     private static final String DASH_SCOPE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
     private static final String DEFAULT_MODEL = "qwen-turbo";
 
@@ -36,6 +40,70 @@ public class AiCommentServiceImpl implements AiCommentService {
     private ConfigService configService;
 
     private final RestTemplate restTemplate = new RestTemplate();
+
+    @Override
+    public RelevanceAnalysisResult analyzeRelevance(String studentContext, String teacherContext) {
+        if (!StringUtils.hasText(studentContext) || !StringUtils.hasText(teacherContext)) {
+            return new RelevanceAnalysisResult(0.0, RelevanceAnalysisResult.SOURCE_EMPTY_INPUT, "input_missing");
+        }
+
+        String apiKey = configService.getConfigValue(ConfigServiceImpl.KEY_QWEN_API_KEY);
+        if (!StringUtils.hasText(apiKey)) {
+            return fallbackAnalysis(studentContext, teacherContext, "api_key_missing", null);
+        }
+
+        String prompt = "你是毕业设计导师匹配评分器。请根据学生提交材料与教师研究方向/招生要求的匹配程度，"
+                + "给出一个0到100之间的整数分数。只返回数字，不要解释。\n"
+                + "学生材料：" + studentContext + "\n"
+                + "教师信息：" + teacherContext;
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.add(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey);
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("model", DEFAULT_MODEL);
+            java.util.List<Map<String, String>> messages = new java.util.ArrayList<>();
+            Map<String, String> userMessage = new HashMap<>();
+            userMessage.put("role", "user");
+            userMessage.put("content", prompt);
+            messages.add(userMessage);
+            body.put("messages", messages);
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+            org.springframework.http.ResponseEntity<String> response = restTemplate.postForEntity(
+                    DASH_SCOPE_URL, entity, String.class);
+            if (!response.getStatusCode().is2xxSuccessful() || !StringUtils.hasText(response.getBody())) {
+                String reason = !response.getStatusCode().is2xxSuccessful()
+                        ? "http_status_" + response.getStatusCodeValue()
+                        : "response_empty";
+                return fallbackAnalysis(studentContext, teacherContext, reason, null);
+            }
+
+            com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            @SuppressWarnings("unchecked")
+            Map<String, Object> resp = objectMapper.readValue(response.getBody(), Map.class);
+            String content = extractContent(resp);
+            if (!StringUtils.hasText(content)) {
+                return fallbackAnalysis(studentContext, teacherContext, "content_missing", null);
+            }
+            java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)").matcher(content);
+            if (!matcher.find()) {
+                return fallbackAnalysis(studentContext, teacherContext, "score_parse_failed", null);
+            }
+            double score = Double.parseDouble(matcher.group(1));
+            double normalizedScore = Math.max(0.0, Math.min(100.0, score));
+            log.info("Relevance analysis source={}, score={}, reason={}",
+                    RelevanceAnalysisResult.SOURCE_MODEL, normalizedScore, "model_success");
+            return new RelevanceAnalysisResult(normalizedScore,
+                    RelevanceAnalysisResult.SOURCE_MODEL,
+                    "model_success");
+        } catch (Exception e) {
+            return fallbackAnalysis(studentContext, teacherContext,
+                    "exception_" + e.getClass().getSimpleName(), e);
+        }
+    }
 
     @Override
     @SuppressWarnings("unchecked")
@@ -165,6 +233,82 @@ public class AiCommentServiceImpl implements AiCommentService {
             return "【提示】调用大模型出错：" + e.getMessage() +
                     (e.getCause() != null ? " (原因: " + e.getCause().getMessage() + ")" : "");
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private String extractContent(Map<String, Object> resp) {
+        Object choicesObj = resp.get("choices");
+        if (choicesObj instanceof List && !((List<?>) choicesObj).isEmpty()) {
+            Object first = ((List<?>) choicesObj).get(0);
+            if (first instanceof Map) {
+                Object messageObj = ((Map<?, ?>) first).get("message");
+                if (messageObj instanceof Map) {
+                    Object contentObj = ((Map<?, ?>) messageObj).get("content");
+                    if (contentObj != null) {
+                        return contentObj.toString();
+                    }
+                }
+            }
+        }
+
+        Object output = resp.get("output");
+        if (output instanceof Map) {
+            Object outputChoicesObj = ((Map<?, ?>) output).get("choices");
+            if (outputChoicesObj instanceof List && !((List<?>) outputChoicesObj).isEmpty()) {
+                Object first = ((List<?>) outputChoicesObj).get(0);
+                if (first instanceof Map) {
+                    Object messageObj = ((Map<?, ?>) first).get("message");
+                    if (messageObj instanceof Map) {
+                        Object contentObj = ((Map<?, ?>) messageObj).get("content");
+                        if (contentObj != null) {
+                            return contentObj.toString();
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private double fallbackKeywordScore(String studentContext, String teacherContext) {
+        String normalizedStudent = normalize(studentContext);
+        String[] teacherTokens = teacherContext.split("[,，;；/、\\s]+");
+        int total = 0;
+        int matched = 0;
+        for (String token : teacherTokens) {
+            String normalizedToken = normalize(token);
+            if (normalizedToken.length() < 2) {
+                continue;
+            }
+            total++;
+            if (normalizedStudent.contains(normalizedToken)) {
+                matched++;
+            }
+        }
+        if (total == 0) {
+            return 0.0;
+        }
+        return matched * 100.0 / total;
+    }
+
+    private RelevanceAnalysisResult fallbackAnalysis(String studentContext,
+                                                     String teacherContext,
+                                                     String reason,
+                                                     Exception exception) {
+        double score = fallbackKeywordScore(studentContext, teacherContext);
+        if (exception == null) {
+            log.warn("Relevance analysis fallback used: reason={}, score={}", reason, score);
+        } else {
+            log.warn("Relevance analysis fallback used: reason={}, score={}", reason, score, exception);
+        }
+        return new RelevanceAnalysisResult(score, RelevanceAnalysisResult.SOURCE_FALLBACK, reason);
+    }
+
+    private String normalize(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text.toLowerCase().replaceAll("[^\\p{IsHan}a-z0-9]+", "");
     }
 
     @Override

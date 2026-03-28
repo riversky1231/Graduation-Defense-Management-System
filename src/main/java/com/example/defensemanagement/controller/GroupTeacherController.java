@@ -1,5 +1,6 @@
 package com.example.defensemanagement.controller;
 
+import com.example.defensemanagement.common.ApiResponse;
 import com.example.defensemanagement.entity.DefenseGroup;
 import com.example.defensemanagement.entity.DefenseGroupTeacher;
 import com.example.defensemanagement.entity.Teacher;
@@ -13,6 +14,8 @@ import com.example.defensemanagement.entity.Department;
 import com.example.defensemanagement.service.AuthService;
 import com.example.defensemanagement.service.ConfigService;
 import com.example.defensemanagement.service.TeacherService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,6 +33,8 @@ import java.util.Random;
 @RestController
 @RequestMapping("/department/group")
 public class GroupTeacherController {
+
+    private static final Logger log = LoggerFactory.getLogger(GroupTeacherController.class);
 
     @Autowired
     private AuthService authService;
@@ -104,19 +109,19 @@ public class GroupTeacherController {
     }
 
     @PostMapping("/{groupId}/teacher/assign")
-    public String assignTeacher(@PathVariable Long groupId, @RequestParam Long teacherId, HttpSession session) {
+    public ApiResponse<Map<String, Object>> assignTeacher(@PathVariable Long groupId, @RequestParam Long teacherId, HttpSession session) {
         User u = requireDeptAdmin(session);
         if (u == null)
-            return "error:权限不足";
+            return ApiResponse.error("权限不足");
         DefenseGroup g = defenseGroupMapper.findById(groupId);
         if (g == null)
-            return "error:小组不存在";
+            return ApiResponse.error("小组不存在");
         Teacher t = teacherService.findById(teacherId);
         if (t == null)
-            return "error:教师不存在";
+            return ApiResponse.error("教师不存在");
         if (u.getRole() != null && "DEPT_ADMIN".equals(u.getRole().getName())
                 && u.getDepartmentId() != null && !u.getDepartmentId().equals(t.getDepartmentId())) {
-            return "error:只能分配本院系教师";
+            return ApiResponse.error("只能分配本院系教师");
         }
 
         // 检查该教师是否已经属于其他小组
@@ -125,47 +130,47 @@ public class GroupTeacherController {
             // 教师已经属于其他小组，返回错误信息
             DefenseGroup existingGroup = defenseGroupMapper.findById(existing.getGroupId());
             String groupName = existingGroup != null ? existingGroup.getName() : "其他小组";
-            return "error:该教师已经属于" + groupName + "，一个教师不能加入两个小组";
+            return ApiResponse.error("该教师已经属于" + groupName + "，一个教师不能加入两个小组");
         }
 
         // 如果教师已经在当前小组，直接返回成功（避免重复插入）
         if (existing != null && existing.getGroupId().equals(groupId)) {
-            return "success";
+            return ApiResponse.success("教师已在当前小组", Map.of("groupId", groupId, "teacherId", teacherId));
         }
 
         defenseGroupTeacherMapper.insert(groupId, teacherId, 0);
-        return "success";
+        return ApiResponse.success("分配成功", Map.of("groupId", groupId, "teacherId", teacherId));
     }
 
     @DeleteMapping("/{groupId}/teacher/{teacherId}")
-    public String removeTeacher(@PathVariable Long groupId, @PathVariable Long teacherId, HttpSession session) {
+    public ApiResponse<Map<String, Object>> removeTeacher(@PathVariable Long groupId, @PathVariable Long teacherId, HttpSession session) {
         User u = requireDeptAdmin(session);
         if (u == null)
-            return "error:权限不足";
+            return ApiResponse.error("权限不足");
         defenseGroupTeacherMapper.delete(groupId, teacherId);
-        return "success";
+        return ApiResponse.success("移除成功", Map.of("groupId", groupId, "teacherId", teacherId));
     }
 
     @PostMapping("/{groupId}/leader/set")
-    public String setLeader(@PathVariable Long groupId, @RequestParam Long teacherId, HttpSession session) {
+    public ApiResponse<Map<String, Object>> setLeader(@PathVariable Long groupId, @RequestParam Long teacherId, HttpSession session) {
         User u = requireDeptAdmin(session);
         if (u == null)
-            return "error:权限不足";
+            return ApiResponse.error("权限不足");
         DefenseGroup g = defenseGroupMapper.findById(groupId);
         if (g == null)
-            return "error:小组不存在";
+            return ApiResponse.error("小组不存在");
         Teacher t = teacherService.findById(teacherId);
         if (t == null)
-            return "error:教师不存在";
+            return ApiResponse.error("教师不存在");
         if (u.getRole() != null && "DEPT_ADMIN".equals(u.getRole().getName())
                 && u.getDepartmentId() != null && !u.getDepartmentId().equals(t.getDepartmentId())) {
-            return "error:只能设置本院系教师为组长";
+            return ApiResponse.error("只能设置本院系教师为组长");
         }
         // ensure teacher is assigned to this group, then mark leader
         defenseGroupTeacherMapper.insert(groupId, teacherId, 0);
         defenseGroupTeacherMapper.clearLeader(groupId);
         defenseGroupTeacherMapper.setLeader(groupId, teacherId);
-        return "success";
+        return ApiResponse.success("组长设置成功", Map.of("groupId", groupId, "teacherId", teacherId));
     }
 
     /**
@@ -187,26 +192,26 @@ public class GroupTeacherController {
             allTeachers = teacherService.findByDepartmentId(u.getDepartmentId());
         }
 
-        System.out.println("=== 分配教师调试信息 ===");
-        System.out.println("用户角色: " + (u.getRole() != null ? u.getRole().getName() : "null"));
-        System.out.println("用户院系ID: " + u.getDepartmentId());
-        System.out.println("查询到的所有教师数量: " + (allTeachers != null ? allTeachers.size() : 0));
+        log.debug("Loading unassigned teachers, role={}, departmentId={}, teacherCount={}",
+                u.getRole() != null ? u.getRole().getName() : null,
+                u.getDepartmentId(),
+                allTeachers != null ? allTeachers.size() : 0);
         if (allTeachers != null) {
             for (Teacher t : allTeachers) {
-                System.out.println("  教师: " + t.getName() + " (ID: " + t.getId() + ", 院系ID: " + t.getDepartmentId()
-                        + ", 状态: " + t.getStatus() + ")");
+                log.trace("Teacher candidate id={}, name={}, departmentId={}, status={}",
+                        t.getId(), t.getName(), t.getDepartmentId(), t.getStatus());
             }
         }
 
         // 如果查询结果为空，直接返回
         if (allTeachers == null || allTeachers.isEmpty()) {
-            System.out.println("所有教师列表为空");
+            log.debug("No teachers available for unassigned lookup");
             return new ArrayList<>();
         }
 
         // 获取所有已分配教师的ID列表（从 defense_group_teacher 表）
         List<DefenseGroupTeacher> allAssigned = defenseGroupTeacherMapper.findAll();
-        System.out.println("已分配教师关联记录数: " + (allAssigned != null ? allAssigned.size() : 0));
+        log.debug("Assigned teacher relation count={}", allAssigned != null ? allAssigned.size() : 0);
 
         final List<Long> assignedTeacherIds = new ArrayList<>();
         if (allAssigned != null && !allAssigned.isEmpty()) {
@@ -216,7 +221,7 @@ public class GroupTeacherController {
                 }
             }
         }
-        System.out.println("已分配教师ID列表: " + assignedTeacherIds);
+        log.trace("Assigned teacher IDs={}", assignedTeacherIds);
 
         // 过滤出未分配的教师（不在任何小组的教师）
         // 注意：不过滤状态，显示所有未分配的教师（包括禁用的），让管理员决定
@@ -224,15 +229,14 @@ public class GroupTeacherController {
         for (Teacher t : allTeachers) {
             if (t != null && t.getId() != null && !assignedTeacherIds.contains(t.getId())) {
                 unassignedTeachers.add(t);
-                System.out.println("未分配教师: " + t.getName() + " (ID: " + t.getId() + ", 院系ID: " + t.getDepartmentId()
-                        + ", 状态: " + (t.getStatus() != null ? t.getStatus() : "null") + ")");
+                log.trace("Unassigned teacher id={}, name={}, departmentId={}, status={}",
+                        t.getId(), t.getName(), t.getDepartmentId(), t.getStatus());
             } else if (t != null && t.getId() != null) {
-                System.out.println("已分配教师（跳过）: " + t.getName() + " (ID: " + t.getId() + ", 在已分配列表中: "
-                        + assignedTeacherIds.contains(t.getId()) + ")");
+                log.trace("Skipping assigned teacher id={}, name={}, inAssignedList={}",
+                        t.getId(), t.getName(), assignedTeacherIds.contains(t.getId()));
             }
         }
-        System.out.println("未分配教师总数: " + unassignedTeachers.size());
-        System.out.println("===================");
+        log.debug("Unassigned teacher count={}", unassignedTeachers.size());
 
         // 转换为Map格式返回（包含院系信息）
         List<Map<String, Object>> result = new ArrayList<>();
@@ -264,10 +268,10 @@ public class GroupTeacherController {
      * POST /department/group/assign-teachers
      */
     @PostMapping("/assign-teachers")
-    public String assignTeachers(@RequestBody Map<String, Object> request, HttpSession session) {
+    public ApiResponse<Map<String, Object>> assignTeachers(@RequestBody Map<String, Object> request, HttpSession session) {
         User u = requireDeptAdmin(session);
         if (u == null) {
-            return "error:权限不足";
+            return ApiResponse.error("权限不足");
         }
 
         try {
@@ -276,12 +280,12 @@ public class GroupTeacherController {
             List<Integer> teacherIds = (List<Integer>) request.get("teacherIds");
 
             if (groupId == null || teacherIds == null || teacherIds.isEmpty()) {
-                return "error:参数错误";
+                return ApiResponse.error("参数错误");
             }
 
             DefenseGroup g = defenseGroupMapper.findById(groupId);
             if (g == null) {
-                return "error:小组不存在";
+                return ApiResponse.error("小组不存在");
             }
 
             // 批量分配教师到小组
@@ -320,15 +324,21 @@ public class GroupTeacherController {
             }
 
             if (successCount == teacherIds.size()) {
-                return "success";
+                return ApiResponse.success("分配成功", Map.of(
+                        "groupId", groupId,
+                        "successCount", successCount,
+                        "skipCount", skipCount));
             } else if (successCount > 0) {
-                return "success:部分教师分配成功，成功: " + successCount + "/" + teacherIds.size() +
-                        (skipCount > 0 ? "，跳过: " + skipCount : "");
+                return ApiResponse.success("部分教师分配成功，成功: " + successCount + "/" + teacherIds.size() +
+                        (skipCount > 0 ? "，跳过: " + skipCount : ""), Map.of(
+                        "groupId", groupId,
+                        "successCount", successCount,
+                        "skipCount", skipCount));
             } else {
-                return "error:所有教师分配失败，可能已属于其他小组或权限不足";
+                return ApiResponse.error("所有教师分配失败，可能已属于其他小组或权限不足");
             }
         } catch (Exception e) {
-            return "error:" + e.getMessage();
+            return ApiResponse.error(e.getMessage());
         }
     }
 
@@ -338,10 +348,10 @@ public class GroupTeacherController {
      */
     @PostMapping("/remove-teachers")
     @ResponseBody
-    public String removeTeachersFromGroup(@RequestBody Map<String, Object> request, HttpSession session) {
+    public ApiResponse<Map<String, Object>> removeTeachersFromGroup(@RequestBody Map<String, Object> request, HttpSession session) {
         User u = requireDeptAdmin(session);
         if (u == null) {
-            return "error:权限不足";
+            return ApiResponse.error("权限不足");
         }
 
         try {
@@ -350,12 +360,12 @@ public class GroupTeacherController {
             List<Integer> teacherIds = (List<Integer>) request.get("teacherIds");
 
             if (groupId == null || teacherIds == null || teacherIds.isEmpty()) {
-                return "error:参数错误";
+                return ApiResponse.error("参数错误");
             }
 
             DefenseGroup g = defenseGroupMapper.findById(groupId);
             if (g == null) {
-                return "error:小组不存在";
+                return ApiResponse.error("小组不存在");
             }
 
             // 批量从小组移除教师
@@ -366,18 +376,20 @@ public class GroupTeacherController {
                     defenseGroupTeacherMapper.delete(groupId, teacherId.longValue());
                     successCount++;
                 } catch (Exception e) {
-                    System.err.println("移除教师失败: " + teacherId + ", 错误: " + e.getMessage());
+                    log.warn("Failed to remove teacher from group, groupId={}, teacherId={}", groupId, teacherId, e);
                 }
             }
 
             if (successCount == 0) {
-                return "error:没有成功移除任何教师";
+                return ApiResponse.error("没有成功移除任何教师");
             }
 
-            return "success:已成功从小组移除 " + successCount + " 个教师";
+            return ApiResponse.success("已成功从小组移除 " + successCount + " 个教师", Map.of(
+                    "groupId", groupId,
+                    "successCount", successCount));
         } catch (Exception e) {
-            e.printStackTrace();
-            return "error:移除教师失败: " + e.getMessage();
+            log.error("Failed to remove teachers from group", e);
+            return ApiResponse.error("移除教师失败: " + e.getMessage());
         }
     }
 

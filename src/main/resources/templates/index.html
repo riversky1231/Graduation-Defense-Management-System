@@ -6100,8 +6100,8 @@
             }),
           });
 
-          const result = await response.text();
-          if (result === "success") {
+          const result = await parseApiResponse(response);
+          if (result.success) {
             showAlert("success", `成功分配 ${teacherIds.length} 个教师到小组`);
             bootstrap.Modal.getInstance(
               document.getElementById("assignTeachersToGroupModal"),
@@ -6110,7 +6110,7 @@
             sessionStorage.setItem("activeView", "group-management-view");
             location.reload();
           } else {
-            showAlert("error", result);
+            showAlert("error", result.message);
           }
         } catch (error) {
           console.error(error);
@@ -6252,8 +6252,8 @@
             }),
           });
 
-          const result = await response.text();
-          if (result.startsWith("success")) {
+          const result = await parseApiResponse(response);
+          if (result.success) {
             showAlert("success", `成功移除 ${teacherIds.length} 个教师`);
             bootstrap.Modal.getInstance(
               document.getElementById("removeTeachersFromGroupModal"),
@@ -6262,7 +6262,7 @@
             sessionStorage.setItem("activeView", "group-management-view");
             location.reload();
           } else {
-            showAlert("error", result);
+            showAlert("error", result.message);
           }
         } catch (error) {
           console.error(error);
@@ -6383,8 +6383,8 @@
             },
           );
 
-          const result = await response.text();
-          if (result === "success") {
+          const result = await parseApiResponse(response);
+          if (result.success) {
             showAlert("success", "成功设定组长");
             bootstrap.Modal.getInstance(
               document.getElementById("setGroupLeaderModal"),
@@ -6393,7 +6393,7 @@
             sessionStorage.setItem("activeView", "group-management-view");
             location.reload();
           } else {
-            showAlert("error", result);
+            showAlert("error", result.message);
           }
         } catch (error) {
           console.error(error);
@@ -8713,19 +8713,18 @@
         const defenseType =
           document.getElementById("as-modal-defense-type").value;
         const totalScore =
-          parseInt(document.getElementById("as-total-score").value, 10) || 0;
+          parseInt(document.getElementById("as-total-score").value, 10);
+        if (!totalScore || totalScore <= 0) {
+          showAlert("warning", "请先输入有效的总分");
+          return;
+        }
         try {
           const items = await requestAutoSplitItems(defenseType, totalScore);
-          document.getElementById("as-item1").value = items.item1 ?? 0;
-          document.getElementById("as-item2").value = items.item2 ?? 0;
-          document.getElementById("as-item3").value = items.item3 ?? 0;
-          if (defenseType !== "PAPER") {
-            document.getElementById("as-item4").value = items.item4 ?? 0;
-            document.getElementById("as-item5").value = items.item5 ?? 0;
-            document.getElementById("as-item6").value = items.item6 ?? 0;
-          }
-          if (typeof updateAdvisorScoreTotalForTeacher === "function") {
-            updateAdvisorScoreTotalForTeacher();
+          const isPaper = defenseType === "PAPER";
+          const count = isPaper ? 3 : 6;
+          for (let i = 1; i <= count; i++) {
+            const el = document.getElementById("as-item" + i);
+            if (el) el.value = items["item" + i] ?? 0;
           }
           if (typeof updateAdvisorScoreTotal === "function") {
             updateAdvisorScoreTotal();
@@ -9210,16 +9209,18 @@
         const defenseType =
           document.getElementById("rs-modal-defense-type").value;
         const totalScore =
-          parseInt(document.getElementById("rs-total-score").value, 10) || 0;
+          parseInt(document.getElementById("rs-total-score").value, 10);
+        if (!totalScore || totalScore <= 0) {
+          showAlert("warning", "请先输入有效的总分");
+          return;
+        }
         try {
           const items = await requestAutoSplitItems(defenseType, totalScore);
-          document.getElementById("rs-item1").value = items.item1 ?? 0;
-          document.getElementById("rs-item2").value = items.item2 ?? 0;
-          document.getElementById("rs-item3").value = items.item3 ?? 0;
-          if (defenseType !== "PAPER") {
-            document.getElementById("rs-item4").value = items.item4 ?? 0;
-            document.getElementById("rs-item5").value = items.item5 ?? 0;
-            document.getElementById("rs-item6").value = items.item6 ?? 0;
+          const isPaper = defenseType === "PAPER";
+          const count = isPaper ? 3 : 6;
+          for (let i = 1; i <= count; i++) {
+            const el = document.getElementById("rs-item" + i);
+            if (el) el.value = items["item" + i] ?? 0;
           }
           updateReviewerScoreTotal();
         } catch (error) {
@@ -11291,8 +11292,8 @@
             method: "POST",
             body: fd,
           });
-          const text = await resp.text();
-          showAlert(text.startsWith("error") ? "error" : "success", text);
+          const result = await parseApiResponse(resp);
+          showAlert(result.success ? "success" : "error", result.message);
         } catch (e) {
           showAlert("error", "上传失败");
         } finally {
@@ -11321,9 +11322,9 @@
             method: "POST",
             body: fd,
           });
-          const text = await resp.text();
-          if (text.startsWith("error")) {
-            showAlert("error", text);
+          const result = await parseApiResponse(resp);
+          if (!result.success) {
+            showAlert("error", result.message);
           } else {
             showAlert("success", "签名上传成功！");
             // 如果是签名管理页面，显示预览
@@ -13337,8 +13338,8 @@
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: body.toString(),
           });
-          const text = await resp.text();
-          showAlert(text === "success" ? "success" : "error", text);
+          const result = await parseApiResponse(resp);
+          showAlert(result.success ? "success" : "error", result.message);
         } catch (e) {
           showAlert("error", "请求失败");
         } finally {
@@ -13354,13 +13355,41 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(obj),
           });
-          const text = await resp.text();
-          showAlert(text === "success" ? "success" : "error", text);
+          const result = await parseApiResponse(resp);
+          showAlert(result.success ? "success" : "error", result.message);
         } catch (e) {
           showAlert("error", "请求失败");
         } finally {
           toggleLoading(false);
         }
+      }
+
+      async function parseApiResponse(resp) {
+        const contentType = resp.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          const data = await resp.json();
+          if (typeof data?.success === "boolean") {
+            return {
+              success: data.success && resp.ok,
+              message:
+                data.message ||
+                (data.success ? "success" : data.error || "请求失败"),
+              data: data.data,
+            };
+          }
+          return {
+            success: resp.ok,
+            message: data?.message || data?.error || "请求完成",
+            data,
+          };
+        }
+
+        const text = (await resp.text()).trim();
+        return {
+          success: resp.ok && (text === "success" || !text.startsWith("error")),
+          message: text || (resp.ok ? "success" : "请求失败"),
+          data: null,
+        };
       }
 
       function toggleLoading(show) {
@@ -14104,20 +14133,19 @@
         const defenseType =
           document.getElementById("ts-modal-defense-type").value;
         const totalScore =
-          parseInt(document.getElementById("ts-total-score").value, 10) || 0;
+          parseInt(document.getElementById("ts-total-score").value, 10);
+        if (!totalScore || totalScore <= 0) {
+          showAlert("warning", "请先输入有效的总分");
+          return;
+        }
         try {
           const items = await requestAutoSplitItems(defenseType, totalScore);
-          if (defenseType === "PAPER") {
-            document.getElementById("ts-item1").value = items.item1 ?? 0;
-            document.getElementById("ts-item2").value = items.item2 ?? 0;
-            document.getElementById("ts-item3").value = items.item3 ?? 0;
-          } else {
-            document.getElementById("ts-d-item1").value = items.item1 ?? 0;
-            document.getElementById("ts-d-item2").value = items.item2 ?? 0;
-            document.getElementById("ts-d-item3").value = items.item3 ?? 0;
-            document.getElementById("ts-d-item4").value = items.item4 ?? 0;
-            document.getElementById("ts-d-item5").value = items.item5 ?? 0;
-            document.getElementById("ts-d-item6").value = items.item6 ?? 0;
+          const isPaper = defenseType === "PAPER";
+          const count = isPaper ? 3 : 6;
+          const prefix = isPaper ? "ts-item" : "ts-d-item";
+          for (let i = 1; i <= count; i++) {
+            const el = document.getElementById(prefix + i);
+            if (el) el.value = items["item" + i] ?? 0;
           }
           updateTeacherScoreTotal();
         } catch (error) {

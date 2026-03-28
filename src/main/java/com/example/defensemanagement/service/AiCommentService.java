@@ -1,5 +1,7 @@
 package com.example.defensemanagement.service;
 
+import com.example.defensemanagement.common.RelevanceAnalysisResult;
+
 import java.util.function.Consumer;
 
 public interface AiCommentService {
@@ -20,5 +22,17 @@ public interface AiCommentService {
      * @return 完整的生成评语
      */
     String generateCommentStream(String promptTemplateKey, String context, Consumer<String> onChunk);
+
+    /**
+     * 计算学生材料与教师研究方向/招生要求之间的相关度，返回 0-100 分。
+     */
+    default double calculateRelevanceScore(String studentContext, String teacherContext) {
+        return analyzeRelevance(studentContext, teacherContext).getScore();
+    }
+
+    /**
+     * 计算相关度并返回来源标记与回退原因。
+     */
+    RelevanceAnalysisResult analyzeRelevance(String studentContext, String teacherContext);
 }
 

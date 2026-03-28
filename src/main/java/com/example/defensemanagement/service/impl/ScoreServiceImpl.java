@@ -151,7 +151,7 @@ public class ScoreServiceImpl implements ScoreService {
 
         double[] weights = new double[itemCount];
         int[] maxScores = new int[itemCount];
-        if (cfg.size() >= itemCount) {
+        if (cfg != null && cfg.size() >= itemCount) {
             double sum = 0;
             for (int i = 0; i < itemCount; i++) {
                 EvaluationItem it = cfg.get(i);

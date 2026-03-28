@@ -1,14 +1,18 @@
 package com.example.defensemanagement.controller;
 
+import com.example.defensemanagement.common.RelevanceAnalysisResult;
 import com.example.defensemanagement.entity.Student;
 import com.example.defensemanagement.entity.StudentPreference;
 import com.example.defensemanagement.entity.Teacher;
+import com.example.defensemanagement.entity.TeacherProfile;
 import com.example.defensemanagement.entity.User;
 import com.example.defensemanagement.mapper.StudentMapper;
 import com.example.defensemanagement.mapper.StudentPreferenceMapper;
 import com.example.defensemanagement.mapper.TeacherMapper;
+import com.example.defensemanagement.mapper.TeacherProfileMapper;
 import com.example.defensemanagement.service.ConfigService;
 import com.example.defensemanagement.service.StudentService;
+import com.example.defensemanagement.service.VolunteerMatchService;
 import com.example.defensemanagement.service.impl.ConfigServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -37,7 +41,13 @@ public class DepartmentVolunteerController {
     private TeacherMapper teacherMapper;
 
     @Autowired
+    private TeacherProfileMapper teacherProfileMapper;
+
+    @Autowired
     private StudentService studentService;
+
+    @Autowired
+    private VolunteerMatchService volunteerMatchService;
 
     private User getCurrentDeptAdmin(HttpSession session) {
         User user = (User) session.getAttribute("currentUser");
@@ -215,12 +225,16 @@ public class DepartmentVolunteerController {
         Integer year = getCurrentYear();
         List<Teacher> teachers = teacherMapper.findByDepartmentId(departmentId);
         Map<Long, Integer> remaining = new HashMap<>();
+        Map<Long, Integer> assignedCounts = new HashMap<>();
         Map<Long, Teacher> teacherMap = new HashMap<>();
+        Map<Long, TeacherProfile> teacherProfileMap = new HashMap<>();
         if (teachers != null) {
             for (Teacher t : teachers) {
                 teacherMap.put(t.getId(), t);
                 int currentCount = studentMapper.countByAdvisorAndYear(t.getId(), year);
+                assignedCounts.put(t.getId(), currentCount);
                 remaining.put(t.getId(), Math.max(0, maxStudents - currentCount));
+                teacherProfileMap.put(t.getId(), teacherProfileMapper.findByTeacherId(t.getId()));
             }
         }
 
@@ -243,6 +257,7 @@ public class DepartmentVolunteerController {
         int specifiedAssigned = 0;
         int randomAssigned = 0;
         List<Map<String, Object>> failures = new ArrayList<>();
+        Map<String, RelevanceAnalysisResult> relevanceCache = new HashMap<>();
 
         for (Map<String, Object> item : specifiedList) {
             Long studentId = getLong(item, "student_id", "studentId");
@@ -261,29 +276,32 @@ public class DepartmentVolunteerController {
             }
             studentService.assignAdvisor(studentId, teacherId);
             remaining.put(teacherId, remain - 1);
+            assignedCounts.put(teacherId, assignedCounts.getOrDefault(teacherId, 0) + 1);
             assignedCount++;
             specifiedAssigned++;
         }
 
-        Random random = new Random();
         for (Map<String, Object> item : randomList) {
             Long studentId = getLong(item, "student_id", "studentId");
             if (studentId == null) {
                 continue;
             }
-            List<Long> available = new ArrayList<>();
-            for (Map.Entry<Long, Integer> entry : remaining.entrySet()) {
-                if (entry.getValue() != null && entry.getValue() > 0) {
-                    available.add(entry.getKey());
-                }
+            Student student = studentMapper.findById(studentId);
+            if (student == null) {
+                failures.add(buildFailure(studentId, "学生不存在"));
+                continue;
             }
-            if (available.isEmpty()) {
+
+            StudentPreference preference = studentPreferenceMapper.findByStudentIdAndYear(studentId, year);
+            Long bestTeacherId = selectBestTeacher(student, teacherMap, teacherProfileMap, remaining,
+                    assignedCounts, maxStudents, preference, relevanceCache);
+            if (bestTeacherId == null) {
                 failures.add(buildFailure(studentId, "无可用导师名额"));
                 continue;
             }
-            Long teacherId = available.get(random.nextInt(available.size()));
-            studentService.assignAdvisor(studentId, teacherId);
-            remaining.put(teacherId, remaining.get(teacherId) - 1);
+            studentService.assignAdvisor(studentId, bestTeacherId);
+            remaining.put(bestTeacherId, remaining.get(bestTeacherId) - 1);
+            assignedCounts.put(bestTeacherId, assignedCounts.getOrDefault(bestTeacherId, 0) + 1);
             assignedCount++;
             randomAssigned++;
         }
@@ -293,6 +311,36 @@ public class DepartmentVolunteerController {
         result.put("randomAssigned", randomAssigned);
         result.put("failures", failures);
         return result;
+    }
+
+    private Long selectBestTeacher(Student student,
+                                   Map<Long, Teacher> teacherMap,
+                                   Map<Long, TeacherProfile> teacherProfileMap,
+                                   Map<Long, Integer> remaining,
+                                   Map<Long, Integer> assignedCounts,
+                                   int maxStudents,
+                                   StudentPreference preference,
+                                   Map<String, RelevanceAnalysisResult> relevanceCache) {
+        Long bestTeacherId = null;
+        double bestScore = Double.NEGATIVE_INFINITY;
+
+        for (Map.Entry<Long, Teacher> entry : teacherMap.entrySet()) {
+            Long teacherId = entry.getKey();
+            Integer remain = remaining.get(teacherId);
+            if (remain == null || remain <= 0) {
+                continue;
+            }
+
+            double score = volunteerMatchService.calculateMatchScore(preference, student, entry.getValue(),
+                    teacherProfileMap.get(teacherId), remain, assignedCounts.getOrDefault(teacherId, 0), maxStudents,
+                    relevanceCache);
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestTeacherId = teacherId;
+            }
+        }
+        return bestTeacherId;
     }
 
     private Map<String, Object> buildFailure(Long studentId, String reason) {
