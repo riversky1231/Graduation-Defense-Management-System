@@ -54,7 +54,7 @@ class VolunteerMaterialServiceImplTest {
     }
 
     @Test
-    void fallsBackToMetadataWhenPdfMissing() {
+    void returnsEmptyWhenPdfMissing() {
         VolunteerMaterialServiceImpl service = new VolunteerMaterialServiceImpl();
         Student student = student();
         StudentPreference preference = new StudentPreference();
@@ -63,9 +63,10 @@ class VolunteerMaterialServiceImplTest {
 
         StudentMaterialContext context = service.buildStudentContext(student, preference, 11L);
 
-        assertEquals(StudentMaterialContext.SOURCE_METADATA_FALLBACK, context.getSource());
+        // 当 PDF 不存在时，服务不回退到 metadata（避免排名误导），而是返回空
+        assertEquals(StudentMaterialContext.SOURCE_EMPTY, context.getSource());
         assertEquals("pdf_unavailable_or_unreadable", context.getReason());
-        assertTrue(context.getContent().contains("题目：智能分割系统"));
+        assertEquals("", context.getContent());
     }
 
     private Student student() {

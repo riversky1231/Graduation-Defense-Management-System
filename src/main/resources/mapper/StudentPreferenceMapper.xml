@@ -90,6 +90,7 @@
             s.summary,
             s.defense_year,
             s.advisor_teacher_id,
+            s.avatar_path AS student_avatar_path,
             t.name AS advisor_name
         FROM student_preference sp
         JOIN t_student s ON sp.student_id = s.id
@@ -148,6 +149,43 @@
             AND s.advisor_teacher_id IS NULL
         </if>
         ORDER BY s.id DESC
+    </select>
+
+    <!-- 合并三个志愿，返回所有填写了该教师为任意志愿的学生 -->
+    <select id="findAllByTeacherAndYear" resultType="map">
+        SELECT DISTINCT
+            sp.id AS pref_id,
+            sp.student_id,
+            sp.year,
+            sp.choice1_teacher_id,
+            sp.choice2_teacher_id,
+            sp.choice3_teacher_id,
+            sp.file1_path,
+            sp.file2_path,
+            sp.file3_path,
+            sp.status,
+            sp.admin_assign_type,
+            sp.admin_assigned_teacher_id,
+            s.student_no,
+            s.name AS student_name,
+            s.class_info,
+            s.department_id,
+            s.defense_type,
+            s.title,
+            s.summary,
+            s.defense_year,
+            s.advisor_teacher_id,
+            s.avatar_path AS student_avatar_path,
+            t.name AS advisor_name,
+            sp.updated_time
+        FROM student_preference sp
+        JOIN t_student s ON sp.student_id = s.id
+        LEFT JOIN teacher t ON s.advisor_teacher_id = t.id
+        WHERE sp.year = #{year}
+          AND (sp.choice1_teacher_id = #{teacherId}
+            OR sp.choice2_teacher_id = #{teacherId}
+            OR sp.choice3_teacher_id = #{teacherId})
+        ORDER BY sp.updated_time DESC
     </select>
 
 </mapper>

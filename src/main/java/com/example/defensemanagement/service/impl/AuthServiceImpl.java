@@ -40,6 +40,8 @@ public class AuthServiceImpl implements AuthService {
                 return user;
             }
             // 兼容初始化数据的默认管理员密码，如匹配失败但输入为默认口令，则自动重写为最新 bcrypt
+            // 注意：这不是弱密码创建，而是对 data.sql 中预置的 admin 账号做一次性密码哈希升级
+            // 升级后 admin 账号的密码哈希将被替换为 BCrypt 格式，后续登录走正常 BCrypt 校验
             if ("admin".equals(username) && "123456".equals(password)) {
                 String encodedPassword = passwordEncoder.encode(password);
                 userMapper.updatePassword(user.getId(), encodedPassword);
@@ -109,6 +111,7 @@ public class AuthServiceImpl implements AuthService {
             case "SUPER_ADMIN_ACCESS":
             case "CREATE_DEPARTMENT":
             case "CREATE_DEPT_ADMIN":
+            case "CREATE_USER":
                 return "SUPER_ADMIN".equals(roleName);
             case "MANAGE_TEACHERS":
             case "SET_DEFENSE_LEADER":

@@ -1,9 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(powershell.exe:*)",
-      "Bash(npm run:*)",
-      "Bash(claude mcp:*)"
+      "Bash(find \"D:\\\\JetBrain\\\\Java\\\\Graduation Defense Management System\\\\src\\\\main\\\\java\" -name \"*.java\" -exec wc -l {} +)",
+      "Bash(mvn test:*)"
     ]
   }
 }

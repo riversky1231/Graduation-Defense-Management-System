@@ -15,6 +15,9 @@ public interface TeacherScoreRecordMapper {
 
     List<TeacherScoreRecord> findByStudentIdAndYear(Long studentId, Integer year);
 
+    List<TeacherScoreRecord> findByStudentIdsAndYear(@Param("studentIds") List<Long> studentIds,
+                                                     @Param("year") Integer year);
+
     List<TeacherScoreRecord> findByGroupIdAndYear(Long defenseGroupId, Integer year);
 
     List<TeacherScoreRecord> findAll(); // 查询所有记录（超级管理员用）

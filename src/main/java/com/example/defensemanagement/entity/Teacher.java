@@ -15,6 +15,8 @@ public class Teacher {
     private Integer status; // 1-启用，0-禁用
     private Long userId; // 关联的用户ID（user表）
     
+   private String avatarPath; // 头像路径
+   
     // 关联对象
     private Department department;
     

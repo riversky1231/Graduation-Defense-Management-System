@@ -102,8 +102,12 @@ public class StudentPortalController {
                 info.put("teacherNo", t.getTeacherNo());
                 info.put("name", t.getName());
                 info.put("title", t.getTitle());
+                info.put("email", t.getEmail());
+                info.put("phone", t.getPhone());
                 info.put("researchDirection", profile != null ? profile.getResearchDirection() : "");
                 info.put("enrollmentRequirements", profile != null ? profile.getEnrollmentRequirements() : "");
+                info.put("avatarPath", t.getAvatarPath());
+                info.put("avatarUrl", t.getAvatarPath() != null ? "/avatar/view?path=" + t.getAvatarPath() : null);
                 list.add(info);
             }
         }
@@ -122,6 +126,7 @@ public class StudentPortalController {
         Integer year = student.getDefenseYear();
         StudentPreference pref = studentPreferenceMapper.findByStudentIdAndYear(student.getId(), year);
         result.put("preference", pref);
+        result.put("deadlinePassed", isVolunteerDeadlinePassed());
         return result;
     }
 
@@ -131,9 +136,7 @@ public class StudentPortalController {
             @RequestParam(required = false) Long choice1,
             @RequestParam(required = false) Long choice2,
             @RequestParam(required = false) Long choice3,
-            @RequestParam(required = false) MultipartFile file1,
-            @RequestParam(required = false) MultipartFile file2,
-            @RequestParam(required = false) MultipartFile file3,
+            @RequestParam(required = false) MultipartFile file,
             HttpSession session) {
 
         Student student = getCurrentStudent(session);
@@ -154,9 +157,8 @@ public class StudentPortalController {
             Path basePath = Paths.get(baseDir);
             Files.createDirectories(basePath);
 
-            String file1Path = savePdfIfPresent(file1, basePath, "choice1.pdf", choice1 != null);
-            String file2Path = savePdfIfPresent(file2, basePath, "choice2.pdf", choice2 != null);
-            String file3Path = savePdfIfPresent(file3, basePath, "choice3.pdf", choice3 != null);
+            // 学生只需提交一份 PDF，三个志愿共用同一份材料
+            String materialPath = savePdfIfPresent(file, basePath, "material.pdf", true);
 
             StudentPreference pref = studentPreferenceMapper.findByStudentIdAndYear(student.getId(), year);
             if (pref == null) {
@@ -168,17 +170,22 @@ public class StudentPortalController {
                 pref.setChoice1TeacherId(choice1);
                 pref.setChoice2TeacherId(choice2);
                 pref.setChoice3TeacherId(choice3);
-                pref.setFile1Path(file1Path);
-                pref.setFile2Path(file2Path);
-                pref.setFile3Path(file3Path);
+                if (materialPath != null) {
+                    pref.setFile1Path(materialPath);
+                    pref.setFile2Path(materialPath);
+                    pref.setFile3Path(materialPath);
+                }
                 studentPreferenceMapper.insert(pref);
             } else {
                 pref.setChoice1TeacherId(choice1);
                 pref.setChoice2TeacherId(choice2);
                 pref.setChoice3TeacherId(choice3);
-                if (file1Path != null) pref.setFile1Path(file1Path);
-                if (file2Path != null) pref.setFile2Path(file2Path);
-                if (file3Path != null) pref.setFile3Path(file3Path);
+                if (materialPath != null) {
+                    // 新上传的材料同步到三个志愿
+                    pref.setFile1Path(materialPath);
+                    pref.setFile2Path(materialPath);
+                    pref.setFile3Path(materialPath);
+                }
                 pref.setStatus(0);
                 studentPreferenceMapper.update(pref);
             }

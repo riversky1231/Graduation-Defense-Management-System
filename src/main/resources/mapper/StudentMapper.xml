@@ -19,6 +19,7 @@
         <result property="phone" column="phone"/>
         <result property="email" column="email"/>
         <result property="defenseDate" column="defense_date"/>
+        <result property="avatarPath" column="avatar_path"/>
         <association property="advisor" javaType="com.example.defensemanagement.entity.Teacher">
             <id property="id" column="advisor_id"/>
             <result property="teacherNo" column="advisor_teacher_no"/>
@@ -191,8 +192,13 @@
             <if test="phone != null">phone = #{phone},</if>
             <if test="email != null">email = #{email},</if>
             <if test="defenseDate != null">defense_date = #{defenseDate},</if>
+            <if test="avatarPath != null">avatar_path = #{avatarPath},</if>
         </set>
         WHERE id = #{id}
+    </update>
+
+    <update id="updateAvatarPath">
+        UPDATE t_student SET avatar_path = #{avatarPath} WHERE id = #{id}
     </update>
 
     <update id="updateDefenseGroupId">

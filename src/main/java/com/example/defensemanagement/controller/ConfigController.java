@@ -180,7 +180,7 @@ public class ConfigController {
     /**
      * 保存志愿互选配置
      * POST /admin/config/volunteer/save
-     * request body: { "maxStudents": "6", "deadline": "2025-06-10 18:00", "currentRound": "1" }
+     * request body: { "maxStudents": "6", "deadline": "2025-06-10 18:00" }
      */
     @PostMapping("/volunteer/save")
     @ResponseBody
@@ -192,7 +192,6 @@ public class ConfigController {
         try {
             Object maxStudents = request.get("maxStudents");
             Object deadline = request.get("deadline");
-            Object currentRound = request.get("currentRound");
 
             if (maxStudents != null && !String.valueOf(maxStudents).trim().isEmpty()) {
                 configService.saveConfig(ConfigServiceImpl.KEY_TEACHER_MAX_STUDENTS,
@@ -203,11 +202,6 @@ public class ConfigController {
                 configService.saveConfig(ConfigServiceImpl.KEY_VOLUNTEER_DEADLINE,
                         String.valueOf(deadline).trim(),
                         "志愿互选截止时间");
-            }
-            if (currentRound != null && !String.valueOf(currentRound).trim().isEmpty()) {
-                configService.saveConfig(ConfigServiceImpl.KEY_VOLUNTEER_CURRENT_ROUND,
-                        String.valueOf(currentRound).trim(),
-                        "志愿互选当前轮次");
             }
             return "success";
         } catch (Exception e) {

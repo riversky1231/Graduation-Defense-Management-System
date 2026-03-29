@@ -1,4 +1,4 @@
-package com.example.defensemanagement;
+package com.example.defensemanagement.controller;
 
 import com.example.defensemanagement.service.DefenseService;
 import com.example.defensemanagement.entity.ArchiveSession;
@@ -7,9 +7,11 @@ import com.example.defensemanagement.entity.DefenseGroup;
 import com.example.defensemanagement.entity.User;
 import com.example.defensemanagement.entity.Teacher;
 import com.example.defensemanagement.entity.DefenseGroupTeacher;
+import com.example.defensemanagement.entity.Department;
 import com.example.defensemanagement.mapper.DefenseGroupTeacherMapper;
 import com.example.defensemanagement.mapper.DefenseGroupMapper;
 import com.example.defensemanagement.mapper.TeacherMapper;
+import com.example.defensemanagement.mapper.DepartmentMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -32,6 +34,9 @@ public class DefenseController {
     
     @Autowired
     private TeacherMapper teacherMapper;
+
+    @Autowired
+    private DepartmentMapper departmentMapper;
 
     @GetMapping("/")
     public String index(Model model, HttpSession session) {
@@ -218,7 +223,7 @@ public class DefenseController {
             
             // 如果名称为空或null，自动生成
             if (request.getName() == null || request.getName().trim().isEmpty()) {
-                String autoName = generateGroupName();
+                String autoName = generateGroupName(departmentId);
                 g.setName(autoName);
             } else {
                 g.setName(request.getName());
@@ -274,20 +279,23 @@ public class DefenseController {
         }
         
         try {
-            // 获取当前小组数量
-            List<DefenseGroup> existingGroups = defenseService.getAllGroups();
-            int currentCount = existingGroups != null ? existingGroups.size() : 0;
-            
+            // 获取该院系已有小组数量
+            List<DefenseGroup> deptGroups = defenseGroupMapper.findByDepartmentId(departmentId);
+            int currentCount = deptGroups != null ? deptGroups.size() : 0;
+            // 获取院系简称
+            Department dept = departmentMapper.findById(departmentId);
+            String deptPrefix = getDeptShortName(dept);
+
             // 批量创建小组
             for (int i = 1; i <= count; i++) {
                 DefenseGroup g = new DefenseGroup();
-                g.setName("第" + (currentCount + i) + "小组");
+                g.setName(deptPrefix + "第" + toChineseNumber(currentCount + i) + "组");
                 g.setScore(0);
                 g.setDepartmentId(departmentId);
-                g.setDisplayOrder(currentCount + i - 1);
+                g.setDisplayOrder(currentCount + i);
                 defenseService.addGroup(g);
             }
-            
+
             return "success:成功创建" + count + "个小组";
         } catch (Exception e) {
             e.printStackTrace();
@@ -296,12 +304,39 @@ public class DefenseController {
     }
 
     /**
-     * 自动生成小组名称（第n+1小组格式）
+     * 自动生成小组名称（按院系序号，如"计算机第三组"）
      */
-    private String generateGroupName() {
-        List<DefenseGroup> existingGroups = defenseService.getAllGroups();
-        int currentCount = existingGroups != null ? existingGroups.size() : 0;
-        return "第" + (currentCount + 1) + "小组";
+    private String generateGroupName(Long departmentId) {
+        List<DefenseGroup> deptGroups = defenseGroupMapper.findByDepartmentId(departmentId);
+        int currentCount = deptGroups != null ? deptGroups.size() : 0;
+        Department dept = departmentMapper.findById(departmentId);
+        String deptPrefix = getDeptShortName(dept);
+        return deptPrefix + "第" + toChineseNumber(currentCount + 1) + "组";
+    }
+
+    /**
+     * 将数字转为中文序数（1-20），超出范围返回阿拉伯数字
+     */
+    private String toChineseNumber(int n) {
+        String[] cn = {"一","二","三","四","五","六","七","八","九","十",
+                        "十一","十二","十三","十四","十五","十六","十七","十八","十九","二十"};
+        if (n >= 1 && n <= 20) return cn[n - 1];
+        return String.valueOf(n);
+    }
+
+    /**
+     * 获取院系简称，用于小组命名（如"计算机第一组"）。
+     * 优先读取 department.description 字段（管理员填写的简称）；
+     * 为空时兜底：去掉"学院"/"系"/"部"后缀，取前3字。
+     */
+    private String getDeptShortName(Department dept) {
+        if (dept == null) return "";
+        // 优先用 description 字段（管理员填写的简称，如"计算机"、"信通"）
+        String desc = dept.getDescription();
+        if (desc != null && !desc.isBlank()) return desc.trim();
+        // 兜底：去掉常见后缀，取前3字
+        String name = dept.getName().replace("学院", "").replace("系", "").replace("部", "");
+        return name.length() > 3 ? name.substring(0, 3) : name;
     }
 
     @DeleteMapping("/group/{id}")

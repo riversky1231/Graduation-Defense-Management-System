@@ -95,19 +95,6 @@ public class TeacherVolunteerController {
         }
     }
 
-    private Integer getCurrentRound() {
-        String v = configService.getConfigValue(ConfigServiceImpl.KEY_VOLUNTEER_CURRENT_ROUND);
-        if (v == null || v.trim().isEmpty()) {
-            return null;
-        }
-        try {
-            int round = Integer.parseInt(v.trim());
-            return (round >= 1 && round <= 3) ? round : null;
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
     private boolean isDeadlinePassed() {
         String deadline = configService.getConfigValue(ConfigServiceImpl.KEY_VOLUNTEER_DEADLINE);
         if (deadline == null || deadline.trim().isEmpty()) {
@@ -134,7 +121,6 @@ public class TeacherVolunteerController {
         int assigned = studentMapper.countByAdvisorAndYear(teacher.getId(), year);
         result.put("year", year);
         result.put("maxStudents", getMaxStudents());
-        result.put("currentRound", getCurrentRound());
         result.put("deadline", configService.getConfigValue(ConfigServiceImpl.KEY_VOLUNTEER_DEADLINE));
         result.put("assignedCount", assigned);
         result.put("deadlinePassed", isDeadlinePassed());
@@ -160,7 +146,6 @@ public class TeacherVolunteerController {
         int maxStudents = getMaxStudents();
         int assigned = studentMapper.countByAdvisorAndYear(teacher.getId(), year);
         boolean deadlinePassed = isDeadlinePassed();
-        Integer currentRound = getCurrentRound();
         int remaining = Math.max(0, maxStudents - assigned);
         TeacherProfile teacherProfile = teacherProfileMapper.findByTeacherId(teacher.getId());
         Map<String, RelevanceAnalysisResult> relevanceCache = new HashMap<>();
@@ -179,6 +164,11 @@ public class TeacherVolunteerController {
             item.put("advisorTeacherId", r.get("advisor_teacher_id"));
             item.put("advisorName", r.get("advisor_name"));
 
+            // 学生头像
+            String avatarPath = (String) r.get("student_avatar_path");
+            item.put("avatarPath", avatarPath);
+            item.put("avatarUrl", avatarPath != null ? "/avatar/view?path=" + avatarPath : null);
+
             String filePath = null;
             if (round == 1) filePath = (String) r.get("file1_path");
             if (round == 2) filePath = (String) r.get("file2_path");
@@ -189,11 +179,9 @@ public class TeacherVolunteerController {
             boolean assignedToMe = assignedToSomeone && String.valueOf(r.get("advisor_teacher_id"))
                     .equals(String.valueOf(teacher.getId()));
             boolean canAccept = !deadlinePassed
-                    && (currentRound == null || currentRound.equals(round))
                     && !assignedToSomeone
                     && assigned < maxStudents;
             boolean canCancel = !deadlinePassed
-                    && (currentRound == null || currentRound.equals(round))
                     && assignedToMe;
 
             item.put("assignedToMe", assignedToMe);
@@ -223,14 +211,114 @@ public class TeacherVolunteerController {
             list.add(item);
         }
 
-        list.sort((a, b) -> Double.compare(getDouble(b.get("matchScore")), getDouble(a.get("matchScore"))));
+        list.sort((a, b) -> {
+            int cmp = Double.compare(getDouble(b.get("matchScore")), getDouble(a.get("matchScore")));
+            if (cmp != 0) return cmp;
+            return String.valueOf(a.getOrDefault("studentNo", "")).compareTo(String.valueOf(b.getOrDefault("studentNo", "")));
+        });
 
         result.put("year", year);
         result.put("round", round);
         result.put("assignedCount", assigned);
         result.put("maxStudents", maxStudents);
         result.put("deadlinePassed", deadlinePassed);
-        result.put("currentRound", currentRound);
+        result.put("items", list);
+        return result;
+    }
+
+    /** 合并三个志愿，按 matchScore 排序，前端统一展示 */
+    @GetMapping("/all")
+    @ResponseBody
+    public Map<String, Object> getAllVolunteers(HttpSession session) {
+        Map<String, Object> result = new HashMap<>();
+        Teacher teacher = getCurrentTeacher(session);
+        if (teacher == null) {
+            result.put("error", "未登录或非教师身份");
+            return result;
+        }
+        Integer year = getCurrentYear();
+        List<Map<String, Object>> rows = studentPreferenceMapper.findAllByTeacherAndYear(teacher.getId(), year);
+        int maxStudents = getMaxStudents();
+        int assigned = studentMapper.countByAdvisorAndYear(teacher.getId(), year);
+        boolean deadlinePassed = isDeadlinePassed();
+        int remaining = Math.max(0, maxStudents - assigned);
+        TeacherProfile teacherProfile = teacherProfileMapper.findByTeacherId(teacher.getId());
+        Map<String, RelevanceAnalysisResult> relevanceCache = new HashMap<>();
+
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (Map<String, Object> r : rows) {
+            Map<String, Object> item = new HashMap<>();
+            Long studentId = getLong(r.get("student_id"));
+            item.put("studentId", studentId);
+            item.put("studentNo", r.get("student_no"));
+            item.put("studentName", r.get("student_name"));
+            item.put("classInfo", r.get("class_info"));
+            item.put("defenseType", r.get("defense_type"));
+            item.put("title", r.get("title"));
+            item.put("summary", r.get("summary"));
+            item.put("advisorTeacherId", r.get("advisor_teacher_id"));
+            item.put("advisorName", r.get("advisor_name"));
+
+            String avatarPath = (String) r.get("student_avatar_path");
+            item.put("avatarPath", avatarPath);
+            item.put("avatarUrl", avatarPath != null ? "/avatar/view?path=" + avatarPath : null);
+
+            // 判断是哪个志愿，并取对应文件路径
+            Long c1 = getLong(r.get("choice1_teacher_id"));
+            Long c2 = getLong(r.get("choice2_teacher_id"));
+            Long c3 = getLong(r.get("choice3_teacher_id"));
+            int volunteerRound = 0;
+            String filePath = null;
+            if (teacher.getId().equals(c1)) { volunteerRound = 1; filePath = (String) r.get("file1_path"); }
+            else if (teacher.getId().equals(c2)) { volunteerRound = 2; filePath = (String) r.get("file2_path"); }
+            else if (teacher.getId().equals(c3)) { volunteerRound = 3; filePath = (String) r.get("file3_path"); }
+            item.put("volunteerRound", volunteerRound);
+            item.put("filePath", filePath);
+
+            boolean assignedToSomeone = r.get("advisor_teacher_id") != null;
+            boolean assignedToMe = assignedToSomeone && String.valueOf(r.get("advisor_teacher_id"))
+                    .equals(String.valueOf(teacher.getId()));
+            boolean canAccept = !deadlinePassed
+                    && !assignedToSomeone
+                    && assigned < maxStudents;
+            boolean canCancel = !deadlinePassed
+                    && assignedToMe;
+            item.put("assignedToMe", assignedToMe);
+            item.put("assignedToSomeone", assignedToSomeone);
+            item.put("canAccept", canAccept);
+            item.put("canCancel", canCancel);
+
+            if (studentId != null) {
+                Student student = studentMapper.findById(studentId);
+                StudentPreference preference = studentPreferenceMapper.findByStudentIdAndYear(studentId, year);
+                MatchScoreDetail matchDetail = volunteerMatchService.calculateMatchDetail(preference, student, teacher,
+                        teacherProfile, remaining, assigned, maxStudents, relevanceCache);
+                item.put("matchScore", Math.round(matchDetail.getTotalScore() * 100.0) / 100.0);
+                item.put("relevanceScore", Math.round(matchDetail.getRelevanceScore() * 100.0) / 100.0);
+                item.put("relevanceSource", matchDetail.getRelevanceSource());
+                item.put("relevanceReason", matchDetail.getRelevanceReason());
+                item.put("materialSource", matchDetail.getMaterialSource());
+                item.put("materialReason", matchDetail.getMaterialReason());
+            } else {
+                item.put("matchScore", 0.0);
+                item.put("relevanceScore", 0.0);
+                item.put("relevanceSource", RelevanceAnalysisResult.SOURCE_EMPTY_INPUT);
+                item.put("relevanceReason", "student_id_missing");
+                item.put("materialSource", "EMPTY");
+                item.put("materialReason", "student_id_missing");
+            }
+            list.add(item);
+        }
+        list.sort((a, b) -> {
+            int cmp = Double.compare(getDouble(b.get("matchScore")), getDouble(a.get("matchScore")));
+            if (cmp != 0) return cmp;
+            return String.valueOf(a.getOrDefault("studentNo", "")).compareTo(String.valueOf(b.getOrDefault("studentNo", "")));
+        });
+
+        result.put("year", year);
+        result.put("assignedCount", assigned);
+        result.put("maxStudents", maxStudents);
+        result.put("deadlinePassed", deadlinePassed);
         result.put("items", list);
         return result;
     }
@@ -250,11 +338,6 @@ public class TeacherVolunteerController {
         if (isDeadlinePassed()) {
             return "error:志愿录取已截止";
         }
-        Integer currentRound = getCurrentRound();
-        if (currentRound != null && !currentRound.equals(round)) {
-            return "error:当前不允许处理该轮志愿";
-        }
-
         Integer year = getCurrentYear();
         Student student = studentMapper.findById(studentId);
         if (student == null || !year.equals(student.getDefenseYear())) {
@@ -305,11 +388,6 @@ public class TeacherVolunteerController {
         if (isDeadlinePassed()) {
             return "error:志愿录取已截止";
         }
-        Integer currentRound = getCurrentRound();
-        if (currentRound != null && !currentRound.equals(round)) {
-            return "error:当前不允许处理该轮志愿";
-        }
-
         Integer year = getCurrentYear();
         Student student = studentMapper.findById(studentId);
         if (student == null || !year.equals(student.getDefenseYear())) {

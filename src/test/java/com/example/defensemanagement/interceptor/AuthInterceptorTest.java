@@ -24,12 +24,16 @@ class AuthInterceptorTest {
     @Mock
     private AuthService authService;
 
+    @Mock
+    private com.example.defensemanagement.mapper.DefenseGroupTeacherMapper defenseGroupTeacherMapper;
+
     private AuthInterceptor interceptor;
 
     @BeforeEach
     void setUp() {
         interceptor = new AuthInterceptor();
         ReflectionTestUtils.setField(interceptor, "authService", authService);
+        ReflectionTestUtils.setField(interceptor, "defenseGroupTeacherMapper", defenseGroupTeacherMapper);
     }
 
     @Test

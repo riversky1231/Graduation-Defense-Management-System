@@ -52,6 +52,21 @@
         ORDER BY submit_time DESC
     </select>
 
+    <select id="findByStudentIdsAndYear" resultMap="TeacherScoreRecordMap">
+        SELECT tsr.*,
+               s.name as student_name, s.student_no, s.defense_type,
+               t.name as teacher_name, t.teacher_no
+        FROM teacher_score_record tsr
+        LEFT JOIN t_student s ON tsr.student_id = s.id
+        LEFT JOIN teacher t ON tsr.teacher_id = t.id
+        WHERE tsr.year = #{year}
+          AND tsr.student_id IN
+          <foreach collection="studentIds" item="studentId" open="(" separator="," close=")">
+              #{studentId}
+          </foreach>
+        ORDER BY tsr.student_id, tsr.submit_time DESC
+    </select>
+
     <select id="findByGroupIdAndYear" resultMap="TeacherScoreRecordMap">
         SELECT tsr.*,
                s.name as student_name, s.student_no, s.defense_type,

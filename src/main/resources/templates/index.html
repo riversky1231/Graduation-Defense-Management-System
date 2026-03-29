@@ -676,6 +676,204 @@
         color: #fff;
         transform: translateY(-2px);
       }
+
+      /* ========== 头像组件 ========== */
+      .avatar-circle {
+        width: 48px; height: 48px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid rgba(255,255,255,0.3);
+        background: linear-gradient(135deg, #4a6fa5, #6b8fc7);
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-weight: 700; font-size: 1.1rem;
+        flex-shrink: 0;
+      }
+      .avatar-circle img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+
+      .avatar-upload-zone {
+        border: 2px dashed var(--border-color);
+        border-radius: 16px;
+        padding: 2rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: #f8fafc;
+      }
+      .avatar-upload-zone:hover { border-color: var(--primary-color); background: #eef3fb; }
+      .avatar-preview {
+        width: 120px; height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid var(--primary-color);
+        box-shadow: 0 4px 16px rgba(74,111,165,0.2);
+        margin: 0 auto 1rem;
+        display: block;
+      }
+      .avatar-placeholder {
+        width: 120px; height: 120px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4a6fa5, #6b8fc7);
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-size: 2.5rem;
+        margin: 0 auto 1rem;
+      }
+
+      /* ========== 教师卡片网格 ========== */
+      .teacher-card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 1.5rem;
+        padding: 0.5rem 0;
+      }
+      .teacher-card {
+        background: #fff;
+        border-radius: 16px;
+        border: 1px solid var(--border-color);
+        box-shadow: var(--shadow);
+        padding: 1.5rem 1rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.25s ease;
+        position: relative;
+        overflow: hidden;
+      }
+      .teacher-card::before {
+        content: '';
+        position: absolute; top: 0; left: 0; right: 0; height: 4px;
+        background: linear-gradient(90deg, var(--primary-color), #6b8fc7);
+      }
+      .teacher-card:hover {
+        transform: translateY(-6px);
+        box-shadow: var(--shadow-lg);
+        border-color: var(--primary-color);
+      }
+      .teacher-card .tc-avatar {
+        width: 80px; height: 80px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid var(--primary-color);
+        margin: 0 auto 0.75rem;
+        display: block;
+        background: linear-gradient(135deg, #4a6fa5, #6b8fc7);
+      }
+      .teacher-card .tc-avatar-placeholder {
+        width: 80px; height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4a6fa5, #6b8fc7);
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-size: 1.8rem; font-weight: 700;
+        margin: 0 auto 0.75rem;
+        border: 3px solid rgba(74,111,165,0.3);
+      }
+      .teacher-card .tc-name { font-weight: 700; font-size: 1rem; color: var(--heading-color); margin-bottom: 0.25rem; }
+      .teacher-card .tc-title { font-size: 0.8rem; color: #6b7280; margin-bottom: 0.5rem; }
+      .teacher-card .tc-research {
+        font-size: 0.78rem; color: #4b5563;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+        overflow: hidden; line-height: 1.4;
+        background: #f0f4fa; border-radius: 6px; padding: 0.4rem 0.5rem;
+        margin-top: 0.5rem;
+      }
+      .teacher-card .tc-capacity {
+        margin-top: 0.6rem;
+        font-size: 0.75rem;
+      }
+
+      /* ========== 教师详情模态框 ========== */
+      .teacher-detail-modal .modal-header {
+        background: linear-gradient(135deg, var(--primary-color), #6b8fc7);
+        color: #fff; border-radius: 12px 12px 0 0;
+      }
+      .teacher-detail-modal .modal-header .btn-close { filter: invert(1); }
+      .teacher-detail-modal .detail-avatar {
+        width: 100px; height: 100px;
+        border-radius: 50%; object-fit: cover;
+        border: 4px solid #fff;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      }
+      .teacher-detail-modal .detail-avatar-placeholder {
+        width: 100px; height: 100px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4a6fa5, #6b8fc7);
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-size: 2.2rem; font-weight: 700;
+        border: 4px solid #fff;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      }
+      .info-tag {
+        display: inline-flex; align-items: center; gap: 0.3rem;
+        background: #eef3fb; color: var(--primary-color);
+        border-radius: 20px; padding: 0.3rem 0.75rem;
+        font-size: 0.82rem; font-weight: 500; margin: 0.2rem;
+      }
+      .section-label {
+        font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.05em; color: #9ca3af; margin-bottom: 0.5rem;
+      }
+      .content-box {
+        background: #f8fafc; border-radius: 10px; padding: 1rem;
+        border-left: 3px solid var(--primary-color);
+        font-size: 0.9rem; line-height: 1.7; color: #374151;
+        white-space: pre-wrap;
+      }
+
+      /* ========== 个人信息卡片（学生/教师 dashboard） ========== */
+      .profile-hero {
+        background: linear-gradient(135deg, var(--primary-color) 0%, #6b8fc7 100%);
+        border-radius: 16px; padding: 2rem;
+        color: #fff; margin-bottom: 1.5rem;
+        position: relative; overflow: hidden;
+      }
+      .profile-hero::after {
+        content: ''; position: absolute; top: -40px; right: -40px;
+        width: 160px; height: 160px;
+        background: rgba(255,255,255,0.08); border-radius: 50%;
+      }
+      .profile-hero .hero-avatar {
+        width: 90px; height: 90px;
+        border-radius: 50%; object-fit: cover;
+        border: 3px solid rgba(255,255,255,0.6);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        flex-shrink: 0;
+      }
+      .profile-hero .hero-avatar-placeholder {
+        width: 90px; height: 90px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.2);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 2rem; font-weight: 700; color: #fff;
+        border: 3px solid rgba(255,255,255,0.4);
+        flex-shrink: 0;
+      }
+      .profile-hero .hero-name { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.25rem; }
+      .profile-hero .hero-sub { font-size: 0.9rem; opacity: 0.85; }
+      .profile-hero .hero-badge {
+        display: inline-block; background: rgba(255,255,255,0.2);
+        border-radius: 20px; padding: 0.2rem 0.75rem;
+        font-size: 0.8rem; margin-top: 0.4rem;
+      }
+      .stat-mini-card {
+        background: rgba(255,255,255,0.15); border-radius: 10px;
+        padding: 0.75rem 1rem; text-align: center; flex: 1;
+      }
+      .stat-mini-card .val { font-size: 1.5rem; font-weight: 700; }
+      .stat-mini-card .lbl { font-size: 0.75rem; opacity: 0.8; }
+
+      /* ========== 侧边栏头像 ========== */
+      .sidebar-avatar {
+        width: 40px; height: 40px;
+        border-radius: 50%; object-fit: cover;
+        border: 2px solid rgba(255,255,255,0.3);
+        flex-shrink: 0;
+      }
+      .sidebar-avatar-placeholder {
+        width: 40px; height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4a6fa5, #6b8fc7);
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-weight: 700; font-size: 0.9rem;
+        flex-shrink: 0;
+      }
     </style>
   </head>
 
@@ -825,7 +1023,7 @@
 
     <div
       class="sidebar"
-      th:with="currentRole=${session.currentUser != null ? session.currentUser.role.name : (isDefenseLeader ? 'DEFENSE_LEADER' : 'TEACHER')}"
+      th:with="currentRole=${session.currentUser != null and session.currentUser.role != null ? session.currentUser.role.name : (isDefenseLeader ? 'DEFENSE_LEADER' : 'TEACHER')}"
     >
       <div class="logo"><i class="bi bi-shield-check"></i>答辩管理</div>
       <nav id="sidebar-nav" class="nav flex-column">
@@ -1023,32 +1221,38 @@
             data-is-defense-leader=${isDefenseLeader}
          "
       >
-        <div
-          th:if="${currentAdmin != null && currentTeacher == null}"
-          class="text-center"
-        >
-          <small class="text-muted">当前用户</small>
-          <div class="fw-bold" th:text="${currentAdmin.realName}"></div>
-          <span
-            class="role-badge"
-            th:classappend="${currentAdmin.role.name == 'SUPER_ADMIN' ? 'super-admin' : (currentAdmin.role.name == 'DEPT_ADMIN' ? 'dept-admin' : (currentAdmin.role.name == 'STUDENT' ? 'student' : ''))}"
-            th:text="${currentAdmin.role.description}"
-          ></span>
+        <!-- 管理员/学生 -->
+        <div th:if="${currentAdmin != null && currentTeacher == null}" class="d-flex align-items-center gap-2 mb-2">
+          <div class="sidebar-avatar-placeholder" id="sidebar-avatar-admin">
+            <span th:text="${#strings.substring(currentAdmin.realName,0,1)}"></span>
+          </div>
+          <div style="min-width:0">
+            <div class="fw-bold text-white text-truncate" style="font-size:0.9rem" th:text="${currentAdmin.realName}"></div>
+            <span
+              class="role-badge"
+              th:classappend="${currentAdmin.role.name == 'SUPER_ADMIN' ? 'super-admin' : (currentAdmin.role.name == 'DEPT_ADMIN' ? 'dept-admin' : (currentAdmin.role.name == 'STUDENT' ? 'student' : ''))}"
+              th:text="${currentAdmin.role.description}"
+            ></span>
+          </div>
         </div>
-        <div th:if="${currentTeacher != null}" class="text-center">
-          <small class="text-muted">当前用户</small>
-          <div class="fw-bold" th:text="${currentTeacher.name}"></div>
-          <span
-            class="role-badge"
-            th:classappend="${isDefenseLeader ? 'defense-leader' : 'teacher'}"
-            th:text="${isDefenseLeader ? '答辩组长' : '教师'}"
-          ></span>
+        <!-- 教师/答辩组长 -->
+        <div th:if="${currentTeacher != null}" class="d-flex align-items-center gap-2 mb-2">
+          <div class="sidebar-avatar-placeholder" id="sidebar-avatar-teacher"
+               th:attr="data-avatar=${currentTeacher.avatarPath}">
+            <span th:text="${#strings.substring(currentTeacher.name,0,1)}"></span>
+          </div>
+          <div style="min-width:0">
+            <div class="fw-bold text-white text-truncate" style="font-size:0.9rem" th:text="${currentTeacher.name}"></div>
+            <span
+              class="role-badge"
+              th:classappend="${isDefenseLeader ? 'defense-leader' : 'teacher'}"
+              th:text="${isDefenseLeader ? '答辩组长' : '教师'}"
+            ></span>
+          </div>
         </div>
-        <div class="mt-2">
-          <a href="/logout" class="btn btn-sm btn-outline-secondary w-100">
-            <i class="bi bi-box-arrow-right"></i> 退出登录
-          </a>
-        </div>
+        <a href="/logout" class="btn btn-sm btn-outline-secondary w-100 mt-1">
+          <i class="bi bi-box-arrow-right"></i> 退出登录
+        </a>
       </div>
     </div>
 
@@ -1155,71 +1359,42 @@
         </div>
 
         <!-- DEFENSE_LEADER/TEACHER 专属统计卡片 -->
-        <div class="dashboard-stats" id="stats-teacher" style="display: none">
-          <div class="stat-card stat-card-primary">
-            <div class="stat-icon"><i class="bi bi-clipboard-check"></i></div>
-            <div class="stat-body">
-              <div class="stat-value" id="t-pending-students">0</div>
-              <div class="stat-label">待评学生</div>
+        <div id="stats-teacher" style="display: none">
+          <!-- 教师个人信息英雄区 -->
+          <div class="profile-hero mb-4">
+            <div class="d-flex align-items-center gap-4 flex-wrap">
+              <div id="t-avatar-wrap">
+                <div style="width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;color:#fff;border:3px solid rgba(255,255,255,0.4);">
+                  <i class="bi bi-person-workspace"></i>
+                </div>
+              </div>
+              <div class="flex-grow-1">
+                <div class="hero-name" id="t-hero-name">--</div>
+                <div class="hero-sub"><span id="t-hero-title" class="me-2"></span><span class="hero-badge" id="t-hero-role">教师</span></div>
+              </div>
             </div>
-          </div>
-          <div class="stat-card stat-card-success">
-            <div class="stat-icon"><i class="bi bi-check-circle-fill"></i></div>
-            <div class="stat-body">
-              <div class="stat-value" id="t-scored-students">0</div>
-              <div class="stat-label">已评学生</div>
-            </div>
-          </div>
-          <div class="stat-card stat-card-warning">
-            <div class="stat-icon"><i class="bi bi-percent"></i></div>
-            <div class="stat-body">
-              <div class="stat-value" id="t-score-progress">0%</div>
-              <div class="stat-label">评分进度</div>
-            </div>
-          </div>
-          <div class="stat-card stat-card-info">
-            <div class="stat-icon"><i class="bi bi-collection"></i></div>
-            <div class="stat-body">
-              <div class="stat-value" id="t-my-groups">0</div>
-              <div class="stat-label">参与小组</div>
+            <div class="d-flex gap-3 mt-3 flex-wrap">
+              <div class="stat-mini-card">
+                <div class="val" id="t-pending-students">0</div>
+                <div class="lbl">待评学生</div>
+              </div>
+              <div class="stat-mini-card">
+                <div class="val" id="t-scored-students">0</div>
+                <div class="lbl">已评学生</div>
+              </div>
+              <div class="stat-mini-card">
+                <div class="val" id="t-score-progress">0%</div>
+                <div class="lbl">评分进度</div>
+              </div>
+              <div class="stat-mini-card">
+                <div class="val" id="t-my-groups">0</div>
+                <div class="lbl">参与小组</div>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- STUDENT 专属统计卡片 -->
-        <div class="dashboard-stats" id="stats-student" style="display: none">
-          <div class="stat-card stat-card-primary">
-            <div class="stat-icon"><i class="bi bi-ui-checks-grid"></i></div>
-            <div class="stat-body">
-              <div class="stat-value" id="st-preference-status">未提交</div>
-              <div class="stat-label">志愿填报</div>
-            </div>
-          </div>
-          <div class="stat-card stat-card-success">
-            <div class="stat-icon"><i class="bi bi-person-check-fill"></i></div>
-            <div class="stat-body">
-              <div class="stat-value" id="st-advisor-name">--</div>
-              <div class="stat-label">录取导师</div>
-            </div>
-          </div>
-          <div class="stat-card stat-card-warning">
-            <div class="stat-icon"><i class="bi bi-clipboard-check"></i></div>
-            <div class="stat-body">
-              <div class="stat-value" id="st-final-score">--</div>
-              <div class="stat-label">答辩成绩</div>
-            </div>
-          </div>
-          <div class="stat-card stat-card-info">
-            <div class="stat-icon">
-              <i class="bi bi-calendar-check-fill"></i>
-            </div>
-            <div class="stat-body">
-              <div class="stat-value" id="st-defense-year">--</div>
-              <div class="stat-label">答辩年份</div>
-            </div>
-          </div>
-        </div>
-
         <!-- 快捷操作区 -->
         <div class="module mb-3" id="dashboard-quick-actions">
           <div class="module-header">
@@ -1232,60 +1407,95 @@
 
         <!-- 主内容区 - 根据角色动态显示 -->
         <!-- STUDENT 专属内容区 -->
-        <div class="main-grid" id="content-student" style="display: none">
-          <div class="module">
-            <div class="module-header">
-              <h4><i class="bi bi-person-lines-fill"></i> 学生信息</h4>
+        <div id="content-student" style="display: none">
+          <!-- 个人信息英雄区 -->
+          <div class="profile-hero mb-4">
+            <div class="d-flex align-items-center gap-4 flex-wrap">
+              <div id="st-avatar-wrap">
+                <div id="st-avatar-placeholder" style="width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;color:#fff;border:3px solid rgba(255,255,255,0.4);">
+                  <i class="bi bi-person"></i>
+                </div>
+              </div>
+              <div class="flex-grow-1">
+                <div class="hero-name" id="st-info-name">--</div>
+                <div class="hero-sub">
+                  <span id="st-info-class" class="me-2"></span>
+                  <span class="hero-badge"><i class="bi bi-hash me-1"></i><span id="st-info-no">--</span></span>
+                </div>
+                <div class="mt-1 hero-sub"><i class="bi bi-building me-1"></i><span id="st-info-dept">--</span></div>
+              </div>
+              <div class="text-center">
+                <input type="file" id="st-avatar-input" accept="image/*" style="display:none" onchange="uploadStudentAvatar(this)">
+                <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4)" onclick="document.getElementById('st-avatar-input').click()">
+                  <i class="bi bi-camera"></i> 上传头像
+                </button>
+                <div style="font-size:0.75rem;opacity:0.7;margin-top:0.3rem">PNG/JPG，≤2MB</div>
+              </div>
             </div>
-            <div class="row g-3">
-              <div class="col-md-6">
-                <strong>学号：</strong><span id="st-info-no">--</span>
+            <!-- 迷你统计 -->
+            <div class="d-flex gap-3 mt-3 flex-wrap">
+              <div class="stat-mini-card">
+                <div class="val" id="st-preference-status">未提交</div>
+                <div class="lbl">志愿填报</div>
               </div>
-              <div class="col-md-6">
-                <strong>姓名：</strong><span id="st-info-name">--</span>
+              <div class="stat-mini-card">
+                <div class="val" id="st-advisor-name">--</div>
+                <div class="lbl">录取导师</div>
               </div>
-              <div class="col-md-6">
-                <strong>班级：</strong><span id="st-info-class">--</span>
+              <div class="stat-mini-card">
+                <div class="val" id="st-final-score">--</div>
+                <div class="lbl">答辩成绩</div>
               </div>
-              <div class="col-md-6">
-                <strong>院系：</strong><span id="st-info-dept">--</span>
-              </div>
-              <div class="col-md-6">
-                <strong>答辩类型：</strong><span id="st-info-type">--</span>
-              </div>
-              <div class="col-md-6">
-                <strong>答辩日期：</strong><span id="st-info-date">--</span>
-              </div>
-              <div class="col-md-12">
-                <strong>题目：</strong><span id="st-info-title">--</span>
-              </div>
-              <div class="col-md-12">
-                <strong>摘要：</strong><span id="st-info-summary">--</span>
+              <div class="stat-mini-card">
+                <div class="val" id="st-defense-year">--</div>
+                <div class="lbl">答辩年份</div>
               </div>
             </div>
           </div>
-          <div class="module">
-            <div class="module-header">
-              <h4><i class="bi bi-flag"></i> 当前状态</h4>
+
+          <div class="main-grid">
+            <div class="module">
+              <div class="module-header">
+                <h4><i class="bi bi-file-earmark-text"></i> 论文信息</h4>
+              </div>
+              <div class="row g-3 p-1">
+                <div class="col-md-6">
+                  <div class="section-label">答辩类型</div>
+                  <div id="st-info-type">--</div>
+                </div>
+                <div class="col-md-6">
+                  <div class="section-label">答辩日期</div>
+                  <div id="st-info-date">--</div>
+                </div>
+                <div class="col-12">
+                  <div class="section-label">论文题目</div>
+                  <div id="st-info-title" class="fw-semibold">--</div>
+                </div>
+                <div class="col-12">
+                  <div class="section-label">摘要</div>
+                  <div id="st-info-summary" class="content-box" style="font-size:0.85rem">--</div>
+                </div>
+              </div>
             </div>
-            <ul class="list-group list-group-flush">
-              <li class="list-group-item d-flex justify-content-between">
-                <span>志愿填报</span>
-                <span id="st-status-preference" class="badge bg-secondary"
-                  >未提交</span
-                >
-              </li>
-              <li class="list-group-item d-flex justify-content-between">
-                <span>录取导师</span>
-                <span id="st-status-advisor" class="badge bg-secondary"
-                  >--</span
-                >
-              </li>
-              <li class="list-group-item d-flex justify-content-between">
-                <span>答辩成绩</span>
-                <span id="st-status-score" class="badge bg-secondary">--</span>
-              </li>
-            </ul>
+            <div class="module">
+              <div class="module-header">
+                <h4><i class="bi bi-flag"></i> 当前状态</h4>
+              </div>
+              <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  <span><i class="bi bi-ui-checks-grid me-2 text-primary"></i>志愿填报</span>
+                  <span id="st-status-preference" class="badge bg-secondary">未提交</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  <span><i class="bi bi-person-check me-2 text-success"></i>录取导师</span>
+                  <span id="st-status-advisor" class="badge bg-secondary">--</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  <span><i class="bi bi-clipboard-check me-2 text-warning"></i>答辩成绩</span>
+                  <span id="st-status-score" class="badge bg-secondary">--</span>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
 
@@ -3551,245 +3761,263 @@
       </div>
 
       <!-- 教师信息视图 -->
-      <div
-        id="student-teacher-info-view"
-        class="view-container"
-        style="display: none"
-      >
+      <div id="student-teacher-info-view" class="view-container" style="display: none">
         <div class="module">
           <div class="module-header">
-            <h4><i class="bi bi-journal-text"></i> 教师信息</h4>
+            <h4><i class="bi bi-people-fill me-2"></i>导师信息</h4>
+            <span class="badge bg-primary" id="teacher-count-badge">0 位导师</span>
           </div>
-          <div class="table-responsive">
-            <table class="table table-hover align-middle">
-              <thead class="table-light">
-                <tr>
-                  <th>教师编号</th>
-                  <th>姓名</th>
-                  <th>职称</th>
-                  <th>研究方向</th>
-                  <th>招生要求</th>
-                </tr>
-              </thead>
-              <tbody id="student-teacher-list">
-                <tr>
-                  <td colspan="5" class="text-center text-muted">加载中...</td>
-                </tr>
-              </tbody>
-            </table>
+          <div id="student-teacher-list" class="teacher-card-grid">
+            <div class="text-center text-muted py-5 w-100">
+              <div class="spinner-border spinner-border-sm me-2"></div>加载中...
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 教师详情模态框 -->
+      <div class="modal fade teacher-detail-modal" id="teacherDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+          <div class="modal-content" style="border-radius:12px;overflow:hidden">
+            <div class="modal-header">
+              <div class="d-flex align-items-center gap-3">
+                <div id="td-avatar-wrap"></div>
+                <div>
+                  <h5 class="modal-title mb-0 fw-bold" id="td-name"></h5>
+                  <div id="td-title" style="opacity:0.85;font-size:0.9rem"></div>
+                </div>
+              </div>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+              <div class="row g-3 mb-3">
+                <div class="col-auto"><span class="info-tag"><i class="bi bi-hash"></i><span id="td-no"></span></span></div>
+                <div class="col-auto" id="td-email-wrap" style="display:none">
+                  <span class="info-tag"><i class="bi bi-envelope"></i><span id="td-email"></span></span>
+                </div>
+                <div class="col-auto" id="td-phone-wrap" style="display:none">
+                  <span class="info-tag"><i class="bi bi-telephone"></i><span id="td-phone"></span></span>
+                </div>
+              </div>
+              <div class="mb-3" id="td-research-wrap">
+                <div class="section-label">研究方向</div>
+                <div class="content-box" id="td-research"></div>
+              </div>
+              <div id="td-enroll-wrap">
+                <div class="section-label">招生要求</div>
+                <div class="content-box" id="td-enroll"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- 志愿填报视图 -->
-      <div
-        id="student-preference-view"
-        class="view-container"
-        style="display: none"
-      >
-        <div class="module">
-          <div class="module-header">
-            <h4><i class="bi bi-ui-checks-grid"></i> 志愿填报</h4>
+      <div id="student-preference-view" class="view-container" style="display: none">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h1><i class="bi bi-ui-checks-grid"></i> 志愿填报</h1>
+          <button class="btn btn-outline-secondary btn-sm" onclick="loadStudentPreference()">
+            <i class="bi bi-arrow-clockwise"></i> 刷新
+          </button>
+        </div>
+        <div class="alert" style="background:linear-gradient(135deg,#eef3fb,#e8f0fe);border:1px solid #c7d7f5;border-radius:12px;padding:1rem 1.25rem;" role="alert">
+          <div class="d-flex align-items-start gap-3">
+            <i class="bi bi-info-circle-fill text-primary mt-1" style="font-size:1.3rem;flex-shrink:0"></i>
+            <div>
+              <div class="fw-semibold mb-1" style="color:#2c5282">填报说明</div>
+              <div style="font-size:0.9rem;color:#4a5568">请依次选择第一、第二、第三志愿导师，并上传一份 PDF 材料（三个志愿共用同一份材料，只需上传一次）。系统将根据志愿优先级和导师容量进行智能匹配。</div>
+            </div>
           </div>
-          <form
-            id="student-preference-form"
-            class="row g-3"
-            enctype="multipart/form-data"
-          >
-            <input type="hidden" id="pref-choice-target" value="" />
-            <div class="col-12">
-              <div class="alert alert-light">
-                请依次选择第一、第二、第三志愿导师，并上传符合导师要求的 PDF
-                材料。
+        </div>
+        <div id="pref-deadline-banner" style="display:none" class="alert alert-danger d-flex align-items-center gap-2 mt-2">
+          <i class="bi bi-lock-fill"></i>
+          <strong>志愿填报已截止，不再接受提交。</strong>
+        </div>
+        <div class="row g-4 mt-1">
+          <div class="col-lg-7">
+            <div class="module">
+              <div class="module-header">
+                <h4><i class="bi bi-list-ol"></i> 志愿选择</h4>
+              </div>
+              <form id="student-preference-form" enctype="multipart/form-data">
+                <input type="hidden" id="pref-choice-target" value="" />
+                <!-- 第一志愿 -->
+                <div class="mb-3 p-3" style="background:#f0f7ff;border-radius:10px;border-left:4px solid #4a6fa5">
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge" style="background:#4a6fa5;font-size:0.85rem;padding:0.4em 0.8em">第一志愿</span>
+                    <small class="text-muted">优先级最高</small>
+                  </div>
+                  <div class="d-flex gap-2">
+                    <input type="text" class="form-control" id="pref-choice1-name" placeholder="点击右侧按钮选择导师" readonly style="background:#fff"/>
+                    <input type="hidden" id="pref-choice1-id" name="choice1" />
+                    <button type="button" class="btn btn-primary" onclick="openTeacherSelectModal(1)"><i class="bi bi-search"></i> 选择</button>
+                  </div>
+                </div>
+                <!-- 第二志愿 -->
+                <div class="mb-3 p-3" style="background:#f5f5f5;border-radius:10px;border-left:4px solid #6b7280">
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge bg-secondary" style="font-size:0.85rem;padding:0.4em 0.8em">第二志愿</span>
+                    <small class="text-muted">备选一</small>
+                  </div>
+                  <div class="d-flex gap-2">
+                    <input type="text" class="form-control" id="pref-choice2-name" placeholder="点击右侧按钮选择导师" readonly style="background:#fff"/>
+                    <input type="hidden" id="pref-choice2-id" name="choice2" />
+                    <button type="button" class="btn btn-outline-secondary" onclick="openTeacherSelectModal(2)"><i class="bi bi-search"></i> 选择</button>
+                  </div>
+                </div>
+                <!-- 第三志愿 -->
+                <div class="mb-3 p-3" style="background:#fafafa;border-radius:10px;border-left:4px solid #9ca3af">
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge bg-dark" style="font-size:0.85rem;padding:0.4em 0.8em">第三志愿</span>
+                    <small class="text-muted">备选二</small>
+                  </div>
+                  <div class="d-flex gap-2">
+                    <input type="text" class="form-control" id="pref-choice3-name" placeholder="点击右侧按钮选择导师" readonly style="background:#fff"/>
+                    <input type="hidden" id="pref-choice3-id" name="choice3" />
+                    <button type="button" class="btn btn-outline-dark" onclick="openTeacherSelectModal(3)"><i class="bi bi-search"></i> 选择</button>
+                  </div>
+                </div>
+                <!-- PDF 上传 -->
+                <div class="mb-3 p-3" style="background:#fff8f0;border-radius:10px;border-left:4px solid #e53e3e">
+                  <label class="form-label fw-semibold"><i class="bi bi-file-earmark-pdf text-danger me-1"></i>上传 PDF 材料（三个志愿共用）</label>
+                  <input type="file" class="form-control" id="pref-file" name="file" accept="application/pdf"/>
+                  <small class="text-muted mt-1 d-block" id="pref-file-name"></small>
+                </div>
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-primary px-4" onclick="submitStudentPreference()"><i class="bi bi-send"></i> 提交志愿</button>
+                  <button type="button" class="btn btn-outline-secondary" onclick="loadStudentPreference()"><i class="bi bi-arrow-clockwise"></i> 刷新</button>
+                </div>
+              </form>
+            </div>
+          </div>
+          <div class="col-lg-5">
+            <div class="module">
+              <div class="module-header">
+                <h4><i class="bi bi-clock-history"></i> 当前填报状态</h4>
+              </div>
+              <div id="pref-status-panel" class="p-2">
+                <div class="d-flex flex-column gap-3">
+                  <div class="d-flex justify-content-between align-items-center p-3" style="background:#f8fafc;border-radius:10px">
+                    <span><i class="bi bi-1-circle-fill text-primary me-2"></i>第一志愿</span>
+                    <span id="pref-status-choice1" class="badge bg-secondary">未填写</span>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center p-3" style="background:#f8fafc;border-radius:10px">
+                    <span><i class="bi bi-2-circle-fill text-secondary me-2"></i>第二志愿</span>
+                    <span id="pref-status-choice2" class="badge bg-secondary">未填写</span>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center p-3" style="background:#f8fafc;border-radius:10px">
+                    <span><i class="bi bi-3-circle-fill text-dark me-2"></i>第三志愿</span>
+                    <span id="pref-status-choice3" class="badge bg-secondary">未填写</span>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center p-3" style="background:#f8fafc;border-radius:10px">
+                    <span><i class="bi bi-file-earmark-pdf text-danger me-2"></i>PDF 材料</span>
+                    <span id="pref-status-file" class="badge bg-secondary">未上传</span>
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="col-12">
-              <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-primary">第一志愿</span>
-                <input
-                  type="text"
-                  class="form-control"
-                  id="pref-choice1-name"
-                  placeholder="请选择导师"
-                  readonly
-                />
-                <input type="hidden" id="pref-choice1-id" name="choice1" />
-                <button
-                  type="button"
-                  class="btn btn-outline-primary"
-                  onclick="openTeacherSelectModal(1)"
-                >
-                  选择
-                </button>
-              </div>
-              <div class="mt-2">
-                <input
-                  type="file"
-                  class="form-control"
-                  id="pref-file1"
-                  name="file1"
-                  accept="application/pdf"
-                />
-                <small class="text-muted" id="pref-file1-name"></small>
-              </div>
-            </div>
-            <div class="col-12">
-              <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-secondary">第二志愿</span>
-                <input
-                  type="text"
-                  class="form-control"
-                  id="pref-choice2-name"
-                  placeholder="请选择导师"
-                  readonly
-                />
-                <input type="hidden" id="pref-choice2-id" name="choice2" />
-                <button
-                  type="button"
-                  class="btn btn-outline-primary"
-                  onclick="openTeacherSelectModal(2)"
-                >
-                  选择
-                </button>
-              </div>
-              <div class="mt-2">
-                <input
-                  type="file"
-                  class="form-control"
-                  id="pref-file2"
-                  name="file2"
-                  accept="application/pdf"
-                />
-                <small class="text-muted" id="pref-file2-name"></small>
-              </div>
-            </div>
-            <div class="col-12">
-              <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-dark">第三志愿</span>
-                <input
-                  type="text"
-                  class="form-control"
-                  id="pref-choice3-name"
-                  placeholder="请选择导师"
-                  readonly
-                />
-                <input type="hidden" id="pref-choice3-id" name="choice3" />
-                <button
-                  type="button"
-                  class="btn btn-outline-primary"
-                  onclick="openTeacherSelectModal(3)"
-                >
-                  选择
-                </button>
-              </div>
-              <div class="mt-2">
-                <input
-                  type="file"
-                  class="form-control"
-                  id="pref-file3"
-                  name="file3"
-                  accept="application/pdf"
-                />
-                <small class="text-muted" id="pref-file3-name"></small>
-              </div>
-            </div>
-            <div class="col-12 d-flex gap-2">
-              <button
-                type="button"
-                class="btn btn-primary"
-                onclick="submitStudentPreference()"
-              >
-                提交志愿
-              </button>
-              <button
-                type="button"
-                class="btn btn-outline-secondary"
-                onclick="loadStudentPreference()"
-              >
-                刷新
-              </button>
-            </div>
-          </form>
+          </div>
         </div>
       </div>
 
       <!-- 结果查询视图 -->
-      <div
-        id="student-result-view"
-        class="view-container"
-        style="display: none"
-      >
-        <div class="module">
-          <div class="module-header">
-            <h4><i class="bi bi-clipboard-check"></i> 结果查询</h4>
+      <div id="student-result-view" class="view-container" style="display: none">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h1><i class="bi bi-clipboard-check"></i> 答辩结果</h1>
+          <button class="btn btn-outline-secondary btn-sm" onclick="loadStudentResult()">
+            <i class="bi bi-arrow-clockwise"></i> 刷新
+          </button>
+        </div>
+        <div class="row g-4">
+          <div class="col-md-6">
+            <div class="module h-100">
+              <div class="module-header">
+                <h4><i class="bi bi-person-check-fill text-success"></i> 录取信息</h4>
+              </div>
+              <div class="text-center py-3">
+                <div id="sr-advisor-avatar" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#4a6fa5,#6b8fc7);display:flex;align-items:center;justify-content:center;font-size:2rem;color:#fff;margin:0 auto 1rem;border:3px solid #e2e8f0;">
+                  <i class="bi bi-person"></i>
+                </div>
+                <div class="fw-bold fs-5 mb-1" id="sr-advisor">--</div>
+                <div class="text-muted" style="font-size:0.85rem">录取导师</div>
+              </div>
+            </div>
           </div>
-          <div class="row g-3">
-            <div class="col-md-6">
-              <strong>录取导师：</strong><span id="sr-advisor">--</span>
-            </div>
-            <div class="col-md-6">
-              <strong>答辩成绩：</strong><span id="sr-score">--</span>
-            </div>
-            <div class="col-md-6">
-              <strong>总评成绩：</strong><span id="sr-total">--</span>
-            </div>
-            <div class="col-md-6">
-              <strong>调节系数：</strong><span id="sr-factor">--</span>
+          <div class="col-md-6">
+            <div class="module h-100">
+              <div class="module-header">
+                <h4><i class="bi bi-bar-chart-fill text-primary"></i> 成绩详情</h4>
+              </div>
+              <div class="d-flex flex-column gap-3 p-1">
+                <div class="d-flex justify-content-between align-items-center p-3" style="background:#f0f7ff;border-radius:10px">
+                  <span><i class="bi bi-clipboard-check text-primary me-2"></i>答辩成绩</span>
+                  <span class="fw-bold fs-5 text-primary" id="sr-score">--</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center p-3" style="background:#f0fff4;border-radius:10px">
+                  <span><i class="bi bi-award text-success me-2"></i>总评成绩</span>
+                  <span class="fw-bold fs-5 text-success" id="sr-total">--</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center p-3" style="background:#fffbf0;border-radius:10px">
+                  <span><i class="bi bi-sliders text-warning me-2"></i>调节系数</span>
+                  <span class="fw-bold fs-5 text-warning" id="sr-factor">--</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       <!-- 教师研究方向与招生要求填写 -->
-      <div
-        id="teacher-profile-view"
-        class="view-container"
-        style="display: none"
-      >
+      <div id="teacher-profile-view" class="view-container" style="display: none">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <h1><i class="bi bi-journal-text"></i> 研究方向与招生要求</h1>
-          <button
-            class="btn btn-outline-secondary btn-sm"
-            onclick="loadTeacherProfile()"
-          >
+          <h1><i class="bi bi-journal-text"></i> 个人资料与研究方向</h1>
+          <button class="btn btn-outline-secondary btn-sm" onclick="loadTeacherProfile()">
             <i class="bi bi-arrow-clockwise"></i> 刷新
           </button>
         </div>
-        <div class="module">
-          <div class="module-header">
-            <h4><i class="bi bi-person-lines-fill"></i> 我的信息</h4>
-          </div>
-          <div class="row g-3 p-3">
-            <div class="col-md-4">
-              <strong>教师编号：</strong><span id="tp-teacher-no">--</span>
+
+        <!-- 个人信息英雄区 -->
+        <div class="profile-hero mb-4">
+          <div class="d-flex align-items-center gap-4">
+            <div id="tp-avatar-wrap">
+              <div class="hero-avatar-placeholder" id="tp-avatar-placeholder" style="width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;color:#fff;border:3px solid rgba(255,255,255,0.4);">
+                <i class="bi bi-person"></i>
+              </div>
             </div>
-            <div class="col-md-4">
-              <strong>姓名：</strong><span id="tp-teacher-name">--</span>
+            <div class="flex-grow-1">
+              <div class="hero-name" id="tp-teacher-name-hero">--</div>
+              <div class="hero-sub">
+                <span id="tp-title-hero" class="me-2"></span>
+                <span class="hero-badge"><i class="bi bi-hash me-1"></i><span id="tp-teacher-no-hero">--</span></span>
+              </div>
+              <div class="mt-2 d-flex gap-2 flex-wrap">
+                <span class="info-tag" id="tp-email-tag" style="display:none!important"><i class="bi bi-envelope"></i><span id="tp-email-hero"></span></span>
+                <span class="info-tag" id="tp-phone-tag" style="display:none!important"><i class="bi bi-telephone"></i><span id="tp-phone-hero"></span></span>
+              </div>
+            </div>
+            <!-- 头像上传按钮 -->
+            <div class="text-center">
+              <input type="file" id="tp-avatar-input" accept="image/*" style="display:none" onchange="uploadTeacherAvatar(this)">
+              <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4)" onclick="document.getElementById('tp-avatar-input').click()">
+                <i class="bi bi-camera"></i> 更换头像
+              </button>
+              <div style="font-size:0.75rem;opacity:0.7;margin-top:0.3rem">PNG/JPG，≤2MB</div>
             </div>
           </div>
         </div>
+
         <div class="module">
           <div class="module-header">
-            <h4><i class="bi bi-pencil-square"></i> 填写内容</h4>
+            <h4><i class="bi bi-pencil-square"></i> 研究方向与招生要求</h4>
           </div>
           <div class="p-3">
             <div class="mb-3">
-              <label class="form-label">研究方向</label>
-              <textarea
-                class="form-control"
-                id="tp-research-direction"
-                rows="4"
-                placeholder="请填写研究方向..."
-              ></textarea>
+              <label class="form-label fw-semibold">研究方向</label>
+              <textarea class="form-control" id="tp-research-direction" rows="4" placeholder="请填写研究方向..."></textarea>
             </div>
             <div class="mb-3">
-              <label class="form-label">招生要求</label>
-              <textarea
-                class="form-control"
-                id="tp-enrollment-requirements"
-                rows="5"
-                placeholder="请填写招生要求标准..."
-              ></textarea>
+              <label class="form-label fw-semibold">招生要求</label>
+              <textarea class="form-control" id="tp-enrollment-requirements" rows="5" placeholder="请填写招生要求标准..."></textarea>
             </div>
             <button class="btn btn-primary" onclick="saveTeacherProfile()">
               <i class="bi bi-save"></i> 保存
@@ -3799,64 +4027,25 @@
       </div>
 
       <!-- 教师志愿录取视图 -->
-      <div
-        id="teacher-volunteer-view"
-        class="view-container"
-        style="display: none"
-      >
-        <header class="header">
+      <div id="teacher-volunteer-view" class="view-container" style="display: none">
+        <div class="d-flex justify-content-between align-items-center mb-3">
           <h1><i class="bi bi-person-check"></i> 志愿录取</h1>
-          <div class="d-flex align-items-center gap-2">
-            <select
-              class="form-select"
-              id="teacher-volunteer-round"
-              style="width: 160px"
-              onchange="loadTeacherVolunteerList()"
-            >
-              <option value="1">第一志愿</option>
-              <option value="2">第二志愿</option>
-              <option value="3">第三志愿</option>
-            </select>
-            <button
-              class="btn btn-outline-primary"
-              onclick="loadTeacherVolunteerList()"
-            >
-              <i class="bi bi-arrow-clockwise"></i> 刷新
-            </button>
+          <button class="btn btn-outline-secondary btn-sm" onclick="loadTeacherVolunteerAll()">
+            <i class="bi bi-arrow-clockwise"></i> 刷新
+          </button>
+        </div>
+        <div class="alert" style="background:linear-gradient(135deg,#eef3fb,#e8f0fe);border:1px solid #c7d7f5;border-radius:12px;padding:1rem 1.25rem;" id="teacher-volunteer-status">
+          <div class="d-flex align-items-center gap-4 flex-wrap">
+            <div><i class="bi bi-people-fill text-primary me-1"></i>已录取 <strong id="teacher-volunteer-count">0</strong> / <strong id="teacher-volunteer-max">0</strong> 人</div>
+            <div><i class="bi bi-clock text-warning me-1"></i>截止时间：<strong id="teacher-volunteer-deadline">未设置</strong></div>
           </div>
-        </header>
-        <div class="module">
-          <div class="alert alert-info" id="teacher-volunteer-status">
-            当前录取人数：<span id="teacher-volunteer-count">0</span> /
-            <span id="teacher-volunteer-max">0</span>， 当前轮次：<span
-              id="teacher-volunteer-current-round"
-              >未设置</span
-            >， 截止时间：<span id="teacher-volunteer-deadline">未设置</span>。可在“材料”列下载学生提交的PDF附件。
-          </div>
-          <div class="table-responsive">
-            <table class="table table-hover align-middle">
-              <thead class="table-light">
-                <tr>
-                  <th>学号</th>
-                  <th>姓名</th>
-                  <th>班级</th>
-                  <th>类型</th>
-                  <th>题目</th>
-                  <th>材料</th>
-                  <th>状态</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody id="teacher-volunteer-list">
-                <tr>
-                  <td colspan="8" class="text-center text-muted">加载中...</td>
-                </tr>
-              </tbody>
-            </table>
+        </div>
+        <div id="teacher-volunteer-grid" class="teacher-card-grid mt-3">
+          <div class="text-center text-muted py-5" style="grid-column:1/-1">
+            <i class="bi bi-hourglass-split" style="font-size:2rem"></i><p class="mt-2">加载中...</p>
           </div>
         </div>
       </div>
-
       <!-- 院系管理员志愿分配视图 -->
       <div
         id="dept-volunteer-assign-view"
@@ -3917,7 +4106,7 @@
                 onclick="randomAssignUnmatched()"
                 id="random-assign-btn"
               >
-                <i class="bi bi-shuffle"></i> 随机分配未匹配学生
+                <i class="bi bi-magic"></i> 自动分配未匹配学生
               </button>
             </div>
           </div>
@@ -3945,15 +4134,6 @@
                 class="form-control"
                 id="cfg-volunteer-deadline"
               />
-            </div>
-            <div class="col-md-2">
-              <label class="form-label fw-bold">当前轮次</label>
-              <select class="form-select" id="cfg-volunteer-round">
-                <option value="">未设置</option>
-                <option value="1">第一志愿</option>
-                <option value="2">第二志愿</option>
-                <option value="3">第三志愿</option>
-              </select>
             </div>
             <div class="col-md-2">
               <button
@@ -4099,7 +4279,7 @@
                     placeholder="请输入要创建的小组个数"
                   />
                   <small class="form-text text-muted"
-                    >小组名称将自动生成为"第n+1小组"、"第n+2小组"等格式</small
+                    >小组名称将自动生成为"院系第n+1组"、"院系第n+2组"等格式</small
                   >
                 </div>
               </div>
@@ -4923,13 +5103,15 @@
               </div>
               <div class="col-12">
                 <label for="departmentDescription" class="form-label"
-                  >描述</label
+                  >院系简称 <span class="text-muted fw-normal">(用于小组命名)</span></label
                 >
-                <textarea
+                <input
+                  type="text"
                   class="form-control"
                   id="departmentDescription"
-                  rows="3"
-                ></textarea>
+                  placeholder="如：计算机、信通、网安"
+                />
+                <div class="form-text">添加小组时将自动生成"简称第N组"格式的名称</div>
               </div>
             </form>
           </div>
@@ -5329,7 +5511,7 @@
           loadTeacherProfile();
         }
         if (viewId === "teacher-volunteer-view") {
-          loadTeacherVolunteerConfig().then(loadTeacherVolunteerList);
+          loadTeacherVolunteerConfig().then(loadTeacherVolunteerAll);
         }
         if (viewId === "group-management-view") {
           loadGroupMaxStudents();
@@ -10829,15 +11011,11 @@
           const deadlineInput = document.getElementById(
             "cfg-volunteer-deadline",
           );
-          const roundSelect = document.getElementById("cfg-volunteer-round");
           if (maxInput && data.maxStudents) {
             maxInput.value = data.maxStudents;
           }
           if (deadlineInput && data.deadline) {
             deadlineInput.value = String(data.deadline).replace(" ", "T");
-          }
-          if (roundSelect && data.currentRound) {
-            roundSelect.value = String(data.currentRound);
           }
         } catch (e) {
           console.error("加载志愿配置失败:", e);
@@ -10856,13 +11034,9 @@
         const deadlineRaw = document.getElementById(
           "cfg-volunteer-deadline",
         )?.value;
-        const currentRound = document.getElementById(
-          "cfg-volunteer-round",
-        )?.value;
         const payload = {};
         if (maxStudents) payload.maxStudents = maxStudents;
         if (deadlineRaw) payload.deadline = deadlineRaw.replace("T", " ");
-        if (currentRound) payload.currentRound = currentRound;
         if (Object.keys(payload).length === 0) {
           showAlert("warning", "请填写至少一项配置");
           return;
@@ -11328,11 +11502,15 @@
           } else {
             showAlert("success", "签名上传成功！");
             // 如果是签名管理页面，显示预览
-            if (inputId === "signature-file") {
+            if (inputId === "signature-file" && result.data && result.data.path) {
+              const previewArea = document.getElementById("signature-preview-area");
+              const previewImg = document.getElementById("signature-preview");
+              if (previewArea && previewImg) {
+                previewImg.src = "/signature/view?path=" + encodeURIComponent(result.data.path) + "&t=" + Date.now();
+                previewArea.style.display = "";
+              }
               // 清空文件选择
               document.getElementById("signature-file").value = "";
-              // 可以尝试加载预览（需要后端提供获取签名的接口）
-              // loadSignaturePreview();
             }
           }
         } catch (e) {
@@ -11842,6 +12020,8 @@
 
         // 初始化角色化Dashboard
         initRoleBasedDashboard();
+        // 加载侧边栏头像（教师/学生）
+        loadSidebarAvatar();
       }
 
       // 根据角色生成快捷操作按钮
@@ -11916,6 +12096,24 @@
             view: "signature-view",
             color: "info",
           },
+          "student-profile": {
+            icon: "bi-person-circle",
+            label: "教师信息",
+            view: "student-teacher-info-view",
+            color: "primary",
+          },
+          "student-preference": {
+            icon: "bi-ui-checks-grid",
+            label: "志愿填报",
+            view: "student-preference-view",
+            color: "success",
+          },
+          "student-result": {
+            icon: "bi-clipboard-check",
+            label: "结果查询",
+            view: "student-result-view",
+            color: "info",
+          },
         };
 
         // 每个角色可用的快捷操作 (对应侧边栏权限，不含答辩总览本身)
@@ -11952,7 +12150,7 @@
             "export",
             "signature-management",
           ],
-          STUDENT: [],
+          STUDENT: ["student-profile", "student-preference", "student-result"],
         };
 
         const actions = roleActions[userRole] || [];
@@ -12049,7 +12247,6 @@
         document.getElementById("stats-super-admin").style.display = "none";
         document.getElementById("stats-dept-admin").style.display = "none";
         document.getElementById("stats-teacher").style.display = "none";
-        document.getElementById("stats-student").style.display = "none";
         document.getElementById("content-super-admin").style.display = "none";
         document.getElementById("content-dept-admin").style.display = "none";
         document.getElementById("content-teacher").style.display = "none";
@@ -12065,12 +12262,11 @@
           document.getElementById("content-dept-admin").style.display = "grid";
           loadDeptAdminDashboard();
         } else if (userRole === "STUDENT") {
-          document.getElementById("stats-student").style.display = "grid";
-          document.getElementById("content-student").style.display = "grid";
+          document.getElementById("content-student").style.display = "block";
           loadStudentDashboard();
         } else {
           // DEFENSE_LEADER 或 TEACHER
-          document.getElementById("stats-teacher").style.display = "grid";
+          document.getElementById("stats-teacher").style.display = "block";
           document.getElementById("content-teacher").style.display = "grid";
           loadTeacherDashboard();
         }
@@ -12307,24 +12503,20 @@
             if (!profileData.error && profileData.student) {
               const s = profileData.student;
               const deptName = s.department ? s.department.name : "--";
-              document.getElementById("st-info-no").textContent =
-                s.studentNo || "--";
-              document.getElementById("st-info-name").textContent =
-                s.name || "--";
-              document.getElementById("st-info-class").textContent =
-                s.classInfo || "--";
-              document.getElementById("st-info-dept").textContent =
-                deptName || "--";
-              document.getElementById("st-info-type").textContent =
-                formatDefenseTypeText(s.defenseType);
-              document.getElementById("st-info-date").textContent =
-                formatDateText(s.defenseDate);
-              document.getElementById("st-info-title").textContent =
-                s.title || "--";
-              document.getElementById("st-info-summary").textContent =
-                s.summary || "--";
-              document.getElementById("st-defense-year").textContent =
-                profileData.year || s.defenseYear || "--";
+              document.getElementById("st-info-no").textContent = s.studentNo || "--";
+              document.getElementById("st-info-name").textContent = s.name || "--";
+              document.getElementById("st-info-class").textContent = s.classInfo || "--";
+              document.getElementById("st-info-dept").textContent = deptName || "--";
+              document.getElementById("st-info-type").textContent = formatDefenseTypeText(s.defenseType);
+              document.getElementById("st-info-date").textContent = formatDateText(s.defenseDate);
+              document.getElementById("st-info-title").textContent = s.title || "--";
+              document.getElementById("st-info-summary").textContent = s.summary || "--";
+              document.getElementById("st-defense-year").textContent = profileData.year || s.defenseYear || "--";
+              // 头像
+              if (s.avatarPath) {
+                const stWrap = document.getElementById("st-avatar-wrap");
+                if (stWrap) stWrap.innerHTML = `<img src="/avatar/view?path=${s.avatarPath}" style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.6);box-shadow:0 4px 16px rgba(0,0,0,0.2);" alt="头像">`;
+              }
             }
           }
 
@@ -12358,34 +12550,66 @@
 
       // 教师信息
       async function loadStudentTeachers() {
-        const tbody = document.getElementById("student-teacher-list");
-        if (!tbody) return;
+        const container = document.getElementById("student-teacher-list");
+        if (!container) return;
+        container.innerHTML = '<div class="text-center text-muted py-5 w-100"><div class="spinner-border spinner-border-sm me-2"></div>加载中...</div>';
         try {
           const resp = await fetch("/student/teachers");
           if (!resp.ok) throw new Error("请求失败");
           const list = await resp.json();
           studentTeacherListCache = list || [];
+          const badge = document.getElementById("teacher-count-badge");
+          if (badge) badge.textContent = `${list.length} 位导师`;
           if (!list || list.length === 0) {
-            tbody.innerHTML =
-              '<tr><td colspan="5" class="text-center text-muted">暂无教师数据</td></tr>';
+            container.innerHTML = '<div class="text-center text-muted py-5 w-100">暂无教师数据</div>';
             return;
           }
-          let html = "";
-          list.forEach((t) => {
-            html += `<tr>
-                        <td>${t.teacherNo || "--"}</td>
-                        <td>${t.name || "--"}</td>
-                        <td>${t.title || "--"}</td>
-                        <td>${t.researchDirection || "--"}</td>
-                        <td>${t.enrollmentRequirements || "--"}</td>
-                    </tr>`;
-          });
-          tbody.innerHTML = html;
+          container.innerHTML = list.map(t => {
+            const initial = (t.name || "?").charAt(0);
+            const avatarHtml = t.avatarUrl
+              ? `<img src="${t.avatarUrl}" class="tc-avatar" alt="${t.name}">`
+              : `<div class="tc-avatar-placeholder">${initial}</div>`;
+            const research = t.researchDirection ? t.researchDirection.substring(0, 40) + (t.researchDirection.length > 40 ? "…" : "") : "暂无";
+            return `<div class="teacher-card" onclick="openTeacherDetailModal(${JSON.stringify(t).replace(/"/g, '&quot;')})">
+              ${avatarHtml}
+              <div class="tc-name">${t.name || "--"}</div>
+              <div class="tc-title">${t.title || ""}</div>
+              <div class="tc-research">${research}</div>
+            </div>`;
+          }).join("");
         } catch (e) {
           console.error("加载教师信息失败:", e);
-          tbody.innerHTML =
-            '<tr><td colspan="5" class="text-center text-muted">加载失败</td></tr>';
+          container.innerHTML = '<div class="text-center text-danger py-5 w-100">加载失败，请刷新重试</div>';
         }
+      }
+
+      function openTeacherDetailModal(t) {
+        // 头像
+        const avatarWrap = document.getElementById("td-avatar-wrap");
+        if (t.avatarUrl) {
+          avatarWrap.innerHTML = `<img src="${t.avatarUrl}" class="detail-avatar" alt="${t.name}">`;
+        } else {
+          avatarWrap.innerHTML = `<div class="detail-avatar-placeholder">${(t.name||"?").charAt(0)}</div>`;
+        }
+        document.getElementById("td-name").textContent = t.name || "--";
+        document.getElementById("td-title").textContent = t.title || "";
+        document.getElementById("td-no").textContent = t.teacherNo || "--";
+        // email / phone
+        const emailWrap = document.getElementById("td-email-wrap");
+        if (t.email) { document.getElementById("td-email").textContent = t.email; emailWrap.style.display = ""; }
+        else emailWrap.style.display = "none";
+        const phoneWrap = document.getElementById("td-phone-wrap");
+        if (t.phone) { document.getElementById("td-phone").textContent = t.phone; phoneWrap.style.display = ""; }
+        else phoneWrap.style.display = "none";
+        // 研究方向
+        const researchWrap = document.getElementById("td-research-wrap");
+        if (t.researchDirection) { document.getElementById("td-research").textContent = t.researchDirection; researchWrap.style.display = ""; }
+        else researchWrap.style.display = "none";
+        // 招生要求
+        const enrollWrap = document.getElementById("td-enroll-wrap");
+        if (t.enrollmentRequirements) { document.getElementById("td-enroll").textContent = t.enrollmentRequirements; enrollWrap.style.display = ""; }
+        else enrollWrap.style.display = "none";
+        new bootstrap.Modal(document.getElementById("teacherDetailModal")).show();
       }
 
       function renderTeacherSelectTable(list, selectedId) {
@@ -12457,14 +12681,16 @@
       }
 
       function updatePreferenceFileLabel(slot, filePath) {
-        const label = document.getElementById(`pref-file${slot}-name`);
+        // 三个志愿共用同一个文件标签，只更新第一次有效路径
+        if (slot !== 1) return;
+        const label = document.getElementById("pref-file-name");
         if (!label) return;
         if (!filePath) {
           label.textContent = "";
           return;
         }
         const parts = String(filePath).split("/");
-        label.textContent = parts[parts.length - 1] || filePath;
+        label.textContent = "已上传：" + (parts[parts.length - 1] || filePath);
       }
 
       async function loadStudentPreference() {
@@ -12477,14 +12703,24 @@
             showAlert("error", data.error);
             return;
           }
+
+          // 截止判断：禁用表单
+          const deadlinePassed = !!data.deadlinePassed;
+          const banner = document.getElementById("pref-deadline-banner");
+          const form = document.getElementById("student-preference-form");
+          if (banner) banner.style.display = deadlinePassed ? "" : "none";
+          if (form) {
+            form.querySelectorAll("button, input[type=file]").forEach(el => {
+              el.disabled = deadlinePassed;
+            });
+          }
+
           const pref = data.preference;
           if (!pref) {
             applyPreferenceChoice(1, "", "");
             applyPreferenceChoice(2, "", "");
             applyPreferenceChoice(3, "", "");
             updatePreferenceFileLabel(1, "");
-            updatePreferenceFileLabel(2, "");
-            updatePreferenceFileLabel(3, "");
             updatePreferenceStatus(false);
             return;
           }
@@ -12510,15 +12746,35 @@
             pref.choice3TeacherId,
             findTeacherName(pref.choice3TeacherId),
           );
-          updatePreferenceFileLabel(1, pref.file1Path);
-          updatePreferenceFileLabel(2, pref.file2Path);
-          updatePreferenceFileLabel(3, pref.file3Path);
+          updatePreferenceFileLabel(1, pref.file1Path || pref.file2Path || pref.file3Path);
           const submitted = !!(
             pref.choice1TeacherId ||
             pref.choice2TeacherId ||
             pref.choice3TeacherId
           );
           updatePreferenceStatus(submitted);
+
+          // 更新状态面板
+          const setStatusBadge = (id, name, filled) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (filled) {
+              el.className = "badge bg-success";
+              el.textContent = name || "已填写";
+            } else {
+              el.className = "badge bg-secondary";
+              el.textContent = "未填写";
+            }
+          };
+          setStatusBadge("pref-status-choice1", findTeacherName(pref.choice1TeacherId), !!pref.choice1TeacherId);
+          setStatusBadge("pref-status-choice2", findTeacherName(pref.choice2TeacherId), !!pref.choice2TeacherId);
+          setStatusBadge("pref-status-choice3", findTeacherName(pref.choice3TeacherId), !!pref.choice3TeacherId);
+          const fileEl = document.getElementById("pref-status-file");
+          const hasFile = !!(pref.file1Path || pref.file2Path || pref.file3Path);
+          if (fileEl) {
+            fileEl.className = hasFile ? "badge bg-success" : "badge bg-secondary";
+            fileEl.textContent = hasFile ? "已上传" : "未上传";
+          }
         } catch (e) {
           console.error("加载志愿失败:", e);
           showAlert("error", "加载志愿失败");
@@ -12576,6 +12832,16 @@
             2,
           );
 
+          // 填充导师头像
+          const avatarEl = document.getElementById("sr-advisor-avatar");
+          if (avatarEl) {
+            if (advisor && advisor.avatarPath) {
+              avatarEl.innerHTML = `<img src="/avatar/view?path=${advisor.avatarPath}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;" onerror="this.parentElement.innerHTML='<i class=\\'bi bi-person\\' style=\\'font-size:2rem;color:#fff;\\'></i>'" />`;
+            } else if (advisor) {
+              avatarEl.innerHTML = `<span style="font-size:2rem;font-weight:700;color:#fff">${(advisor.name||'?')[0]}</span>`;
+            }
+          }
+
           updateAdvisorStatus(advisor ? advisor.name : null);
           const defenseScoreText =
             finalScore.finalDefenseScore != null
@@ -12594,22 +12860,90 @@
           const resp = await fetch("/teacher/profile");
           if (!resp.ok) throw new Error("请求失败");
           const data = await resp.json();
-          if (data.error) {
-            showAlert("error", data.error);
-            return;
+          if (data.error) { showAlert("error", data.error); return; }
+
+          // 填充 hero 区
+          document.getElementById("tp-teacher-name-hero").textContent = data.teacherName || "--";
+          document.getElementById("tp-teacher-no-hero").textContent = data.teacherNo || "--";
+          document.getElementById("tp-title-hero").textContent = data.title || "";
+          if (data.email) {
+            document.getElementById("tp-email-hero").textContent = data.email;
+            document.getElementById("tp-email-tag").style.removeProperty("display");
           }
-          document.getElementById("tp-teacher-no").textContent =
-            data.teacherNo || "--";
-          document.getElementById("tp-teacher-name").textContent =
-            data.teacherName || "--";
-          document.getElementById("tp-research-direction").value =
-            data.researchDirection || "";
-          document.getElementById("tp-enrollment-requirements").value =
-            data.enrollmentRequirements || "";
+          if (data.phone) {
+            document.getElementById("tp-phone-hero").textContent = data.phone;
+            document.getElementById("tp-phone-tag").style.removeProperty("display");
+          }
+          // 头像
+          const avatarWrap = document.getElementById("tp-avatar-wrap");
+          if (data.avatarUrl) {
+            avatarWrap.innerHTML = `<img src="${data.avatarUrl}" style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.6);box-shadow:0 4px 16px rgba(0,0,0,0.2);" alt="头像">`;
+          } else {
+            const initial = (data.teacherName || "T").charAt(0);
+            avatarWrap.innerHTML = `<div style="width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;color:#fff;border:3px solid rgba(255,255,255,0.4);">${initial}</div>`;
+          }
+          // 填充表单
+          document.getElementById("tp-research-direction").value = data.researchDirection || "";
+          document.getElementById("tp-enrollment-requirements").value = data.enrollmentRequirements || "";
         } catch (e) {
           console.error("加载教师信息失败:", e);
           showAlert("error", "加载教师信息失败");
         }
+      }
+
+      async function uploadTeacherAvatar(input) {
+        if (!input.files || !input.files[0]) return;
+        const formData = new FormData();
+        formData.append("file", input.files[0]);
+        try {
+          const resp = await fetch("/avatar/upload", { method: "POST", body: formData });
+          const data = await resp.json();
+          if (data.error) { showAlert("error", data.error); return; }
+          showAlert("success", "头像上传成功");
+          loadTeacherProfile();
+          loadSidebarAvatar();
+        } catch (e) {
+          showAlert("error", "上传失败，请重试");
+        }
+      }
+
+      async function uploadStudentAvatar(input) {
+        if (!input.files || !input.files[0]) return;
+        const formData = new FormData();
+        formData.append("file", input.files[0]);
+        try {
+          const resp = await fetch("/avatar/upload", { method: "POST", body: formData });
+          const data = await resp.json();
+          if (data.error) { showAlert("error", data.error); return; }
+          showAlert("success", "头像上传成功");
+          // 更新学生 dashboard 头像
+          const wrap = document.getElementById("st-avatar-wrap");
+          if (wrap && data.url) {
+            wrap.innerHTML = `<img src="${data.url}" style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.6);box-shadow:0 4px 16px rgba(0,0,0,0.2);" alt="头像">`;
+          }
+          loadSidebarAvatar();
+        } catch (e) {
+          showAlert("error", "上传失败，请重试");
+        }
+      }
+
+      async function loadSidebarAvatar() {
+        try {
+          const resp = await fetch("/avatar/me");
+          if (!resp.ok) return;
+          const data = await resp.json();
+          if (!data.avatarUrl) return;
+          // 教师侧边栏头像
+          const teacherEl = document.getElementById("sidebar-avatar-teacher");
+          if (teacherEl) {
+            teacherEl.outerHTML = `<img src="${data.avatarUrl}" class="sidebar-avatar" alt="头像">`;
+          }
+          // 学生 dashboard 头像（如果还是占位符）
+          const stWrap = document.getElementById("st-avatar-wrap");
+          if (stWrap && stWrap.querySelector("#st-avatar-placeholder")) {
+            stWrap.innerHTML = `<img src="${data.avatarUrl}" style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.6);box-shadow:0 4px 16px rgba(0,0,0,0.2);" alt="头像">`;
+          }
+        } catch (e) { /* 静默失败 */ }
       }
 
       async function saveTeacherProfile() {
@@ -12650,17 +12984,8 @@
             data.assignedCount ?? 0;
           document.getElementById("teacher-volunteer-max").textContent =
             data.maxStudents ?? "--";
-          document.getElementById(
-            "teacher-volunteer-current-round",
-          ).textContent = data.currentRound ?? "未设置";
           document.getElementById("teacher-volunteer-deadline").textContent =
             data.deadline || "未设置";
-          if (data.currentRound) {
-            const roundSelect = document.getElementById(
-              "teacher-volunteer-round",
-            );
-            if (roundSelect) roundSelect.value = String(data.currentRound);
-          }
           return data;
         } catch (e) {
           console.error("加载志愿配置失败:", e);
@@ -12669,79 +12994,110 @@
       }
 
       async function loadTeacherVolunteerList() {
-        const roundSelect = document.getElementById("teacher-volunteer-round");
-        const round = roundSelect ? Number(roundSelect.value || 1) : 1;
-        const tbody = document.getElementById("teacher-volunteer-list");
-        if (tbody)
-          tbody.innerHTML =
-            '<tr><td colspan="8" class="text-center text-muted">加载中...</td></tr>';
+        // 保留旧函数以防其他地方调用，直接委托给新函数
+        await loadTeacherVolunteerAll();
+      }
+
+      async function loadTeacherVolunteerAll() {
+        const grid = document.getElementById("teacher-volunteer-grid");
+        if (grid) grid.innerHTML = '<div class="text-center text-muted py-5" style="grid-column:1/-1"><i class="bi bi-hourglass-split" style="font-size:2rem"></i><p class="mt-2">加载中...</p></div>';
         try {
-          const resp = await fetch(`/teacher/volunteer/list?round=${round}`);
+          const resp = await fetch("/teacher/volunteer/all");
           if (!resp.ok) throw new Error("请求失败");
           const data = await resp.json();
-          if (data.error) {
-            showAlert("error", data.error);
-            if (tbody)
-              tbody.innerHTML =
-                '<tr><td colspan="8" class="text-center text-muted">加载失败</td></tr>';
-            return;
-          }
-          document.getElementById("teacher-volunteer-count").textContent =
-            data.assignedCount ?? 0;
-          document.getElementById("teacher-volunteer-max").textContent =
-            data.maxStudents ?? "--";
-          document.getElementById(
-            "teacher-volunteer-current-round",
-          ).textContent = data.currentRound ?? "未设置";
-          document.getElementById("teacher-volunteer-deadline").textContent =
-            data.deadline || "未设置";
+          if (data.error) { showAlert("error", data.error); return; }
+
+          document.getElementById("teacher-volunteer-count").textContent = data.assignedCount ?? 0;
+          document.getElementById("teacher-volunteer-max").textContent = data.maxStudents ?? "--";
+          document.getElementById("teacher-volunteer-deadline").textContent = data.deadline || "未设置";
 
           const items = data.items || [];
-          if (!tbody) return;
+          if (!grid) return;
           if (items.length === 0) {
-            tbody.innerHTML =
-              '<tr><td colspan="8" class="text-center text-muted">暂无志愿数据</td></tr>';
+            grid.innerHTML = '<div class="text-center text-muted py-5" style="grid-column:1/-1"><i class="bi bi-inbox" style="font-size:2.5rem"></i><p class="mt-2">暂无志愿数据</p></div>';
             return;
           }
+
+          const roundLabels = { 1: { text: "第一志愿", cls: "bg-primary" }, 2: { text: "第二志愿", cls: "bg-success" }, 3: { text: "第三志愿", cls: "bg-warning text-dark" } };
           let html = "";
           items.forEach((item) => {
-            const statusText = item.assignedToMe
-              ? "已录取"
-              : item.assignedToSomeone
-                ? `已被 ${item.advisorName || "其他导师"} 录取`
-                : "待录取";
+            const rl = roundLabels[item.volunteerRound] || { text: "志愿", cls: "bg-secondary" };
+            const avatarHtml = item.avatarUrl
+              ? `<img src="${item.avatarUrl}" class="rounded-circle" style="width:64px;height:64px;object-fit:cover;border:3px solid #e8f0fe;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="rounded-circle d-none align-items-center justify-content-center bg-primary text-white fw-bold" style="width:64px;height:64px;font-size:1.4rem;flex-shrink:0">${(item.studentName||'?')[0]}</div>`
+              : `<div class="rounded-circle d-flex align-items-center justify-content-center bg-primary text-white fw-bold" style="width:64px;height:64px;font-size:1.4rem;flex-shrink:0">${(item.studentName||'?')[0]}</div>`;
+
+            const matchPct = Math.min(100, Math.round((item.matchScore || 0) * 10));
+            const relPct = Math.min(100, Math.round((item.relevanceScore || 0) * 10));
+            const matchColor = matchPct >= 70 ? "#28a745" : matchPct >= 40 ? "#fd7e14" : "#6c757d";
+            const relColor = relPct >= 70 ? "#28a745" : relPct >= 40 ? "#fd7e14" : "#6c757d";
+
             const fileBtn = item.filePath
-              ? `<a class="btn btn-sm btn-outline-secondary" href="/teacher/volunteer/file?studentId=${item.studentId}&round=${round}" target="_blank">下载材料</a>`
-              : '<span class="text-muted">无</span>';
-            let actionBtn = '<span class="text-muted">-</span>';
+              ? `<a class="btn btn-sm btn-outline-secondary" href="/teacher/volunteer/file?studentId=${item.studentId}&round=${item.volunteerRound}" target="_blank"><i class="bi bi-file-earmark-pdf me-1"></i>下载材料</a>`
+              : '<span class="text-muted small">无材料</span>';
+
+            let actionBtn = '';
             if (item.canAccept) {
-              actionBtn = `<button class="btn btn-sm btn-primary" onclick="acceptVolunteer(${item.studentId})">录取</button>`;
+              actionBtn = `<button class="btn btn-sm btn-primary" onclick="acceptVolunteer(${item.studentId},${item.volunteerRound})"><i class="bi bi-check-circle me-1"></i>录取</button>`;
             } else if (item.canCancel) {
-              actionBtn = `<button class="btn btn-sm btn-outline-danger" onclick="cancelVolunteer(${item.studentId})">取消录取</button>`;
+              actionBtn = `<button class="btn btn-sm btn-outline-danger" onclick="cancelVolunteer(${item.studentId},${item.volunteerRound})"><i class="bi bi-x-circle me-1"></i>取消录取</button>`;
+            } else if (item.assignedToMe) {
+              actionBtn = '<span class="badge bg-success px-2 py-1"><i class="bi bi-check2 me-1"></i>已录取</span>';
+            } else if (item.assignedToSomeone) {
+              actionBtn = `<span class="badge bg-secondary px-2 py-1">已被${item.advisorName||'他人'}录取</span>`;
             }
-            html += `<tr>
-                        <td>${item.studentNo || "--"}</td>
-                        <td>${item.studentName || "--"}</td>
-                        <td>${item.classInfo || "--"}</td>
-                        <td>${formatDefenseTypeText(item.defenseType)}</td>
-                        <td>${item.title || "--"}</td>
-                        <td>${fileBtn}</td>
-                        <td>${statusText}</td>
-                        <td>${actionBtn}</td>
-                    </tr>`;
+
+            const noPdf = item.materialSource === 'EMPTY' || item.materialReason === 'pdf_not_uploaded' || item.materialReason === 'pdf_unavailable_or_unreadable';
+            const relevanceReason = noPdf
+              ? '<div class="text-muted small mt-1" style="font-size:0.75rem;color:#aaa!important">未上传PDF，模型未调用</div>'
+              : (item.relevanceReason ? `<div class="text-muted small mt-1" style="font-size:0.75rem;line-height:1.4">${item.relevanceReason.substring(0,80)}${item.relevanceReason.length>80?'...':''}</div>` : '');
+
+            html += `
+            <div class="card h-100 shadow-sm" style="border-radius:14px;border:1px solid #e0e8f5;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(74,111,165,.18)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+              <div class="card-body p-3">
+                <div class="d-flex align-items-center gap-3 mb-2">
+                  ${avatarHtml}
+                  <div class="flex-grow-1 min-width-0">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                      <span class="fw-bold fs-6">${item.studentName||'--'}</span>
+                      <span class="badge ${rl.cls} rounded-pill" style="font-size:.7rem">${rl.text}</span>
+                    </div>
+                    <div class="text-muted small">${item.studentNo||''} · ${item.classInfo||''}</div>
+                    <div class="text-muted small">${formatDefenseTypeText(item.defenseType)}</div>
+                  </div>
+                </div>
+                <div class="mb-2" style="font-size:.85rem;color:#333;line-height:1.4">
+                  <strong>题目：</strong>${item.title||'--'}
+                </div>
+                ${item.summary ? `<div class="text-muted mb-2" style="font-size:.78rem;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${item.summary}</div>` : ''}
+                <div class="mb-2">
+                  <div class="d-flex justify-content-between align-items-center mb-1" style="font-size:.75rem">
+                    <span class="text-muted">综合匹配分</span><span style="color:${matchColor};font-weight:600">${(item.matchScore||0).toFixed(1)}</span>
+                  </div>
+                  <div class="progress" style="height:5px;border-radius:3px"><div class="progress-bar" style="width:${matchPct}%;background:${matchColor}"></div></div>
+                </div>
+                <div class="mb-2">
+                  <div class="d-flex justify-content-between align-items-center mb-1" style="font-size:.75rem">
+                    <span class="text-muted">相关度分数</span><span style="color:${relColor};font-weight:600">${(item.relevanceScore||0).toFixed(1)}</span>
+                  </div>
+                  <div class="progress" style="height:5px;border-radius:3px"><div class="progress-bar" style="width:${relPct}%;background:${relColor}"></div></div>
+                  ${relevanceReason}
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-3 pt-2" style="border-top:1px solid #f0f0f0">
+                  ${fileBtn}
+                  ${actionBtn}
+                </div>
+              </div>
+            </div>`;
           });
-          tbody.innerHTML = html;
+          grid.innerHTML = html;
         } catch (e) {
           console.error("加载志愿列表失败:", e);
-          if (tbody)
-            tbody.innerHTML =
-              '<tr><td colspan="8" class="text-center text-muted">加载失败</td></tr>';
+          if (grid) grid.innerHTML = '<div class="text-center text-danger py-5" style="grid-column:1/-1">加载失败，请刷新重试</div>';
         }
       }
 
-      async function acceptVolunteer(studentId) {
-        const roundSelect = document.getElementById("teacher-volunteer-round");
-        const round = roundSelect ? Number(roundSelect.value || 1) : 1;
+      async function acceptVolunteer(studentId, round) {
+        if (!round) round = 1;
         try {
           const resp = await fetch("/teacher/volunteer/accept", {
             method: "POST",
@@ -12751,7 +13107,7 @@
           const text = await resp.text();
           if (resp.ok && text === "success") {
             showAlert("success", "录取成功");
-            await loadTeacherVolunteerList();
+            await loadTeacherVolunteerAll();
           } else {
             const msg = text.startsWith("error:") ? text.substring(6) : text;
             showAlert("error", "录取失败：" + msg);
@@ -12762,9 +13118,8 @@
         }
       }
 
-      async function cancelVolunteer(studentId) {
-        const roundSelect = document.getElementById("teacher-volunteer-round");
-        const round = roundSelect ? Number(roundSelect.value || 1) : 1;
+      async function cancelVolunteer(studentId, round) {
+        if (!round) round = 1;
         if (!confirm("确定要取消该学生的录取吗？")) return;
         try {
           const resp = await fetch("/teacher/volunteer/cancel", {
@@ -12775,7 +13130,7 @@
           const text = await resp.text();
           if (resp.ok && text === "success") {
             showAlert("success", "已取消录取");
-            await loadTeacherVolunteerList();
+            await loadTeacherVolunteerAll();
           } else {
             const msg = text.startsWith("error:") ? text.substring(6) : text;
             showAlert("error", "取消录取失败：" + msg);
@@ -12785,6 +13140,7 @@
           showAlert("error", "取消录取失败，请重试");
         }
       }
+
 
       // 院系管理员志愿分配
       async function loadDeptVolunteerTeachers() {
@@ -12877,7 +13233,7 @@
                     <td>
                         <select class="form-select form-select-sm" id="dept-assign-type-${studentId}"
                             onchange="onDeptVolunteerAssignTypeChange(${studentId}, this.value)">
-                            <option value="0" ${assignType === 0 ? "selected" : ""}>随机分配</option>
+                            <option value="0" ${assignType === 0 ? "selected" : ""}>自动分配</option>
                             <option value="1" ${assignType === 1 ? "selected" : ""}>指定分配</option>
                         </select>
                     </td>
@@ -12966,6 +13322,21 @@
         try {
           const userInfoDiv = document.querySelector(".user-info");
           const userId = userInfoDiv ? userInfoDiv.dataset.userId : null;
+
+          // 加载教师个人信息填充 hero 区
+          fetch("/teacher/profile").then(r => r.ok ? r.json() : null).then(data => {
+            if (!data || data.error) return;
+            const nameEl = document.getElementById("t-hero-name");
+            const titleEl = document.getElementById("t-hero-title");
+            const roleEl = document.getElementById("t-hero-role");
+            const wrapEl = document.getElementById("t-avatar-wrap");
+            if (nameEl) nameEl.textContent = data.teacherName || "--";
+            if (titleEl) titleEl.textContent = data.title || "";
+            if (roleEl) roleEl.textContent = userInfoDiv && userInfoDiv.dataset.userRole === "DEFENSE_LEADER" ? "答辩组长" : "教师";
+            if (wrapEl && data.avatarUrl) {
+              wrapEl.innerHTML = `<img src="${data.avatarUrl}" style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.5);" onerror="this.parentElement.innerHTML='<div style=\\'width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:2rem;color:#fff;border:3px solid rgba(255,255,255,0.4);\\'><i class=\\'bi bi-person-workspace\\'></i></div>'" />`;
+            }
+          }).catch(() => {});
 
           const [groupResp, advisedResp, reviewedResp] =
             await Promise.allSettled([
@@ -14595,10 +14966,6 @@
           if (data.maxStudents) {
               document.getElementById("cfg-volunteer-max").value = data.maxStudents;
           }
-          if (data.currentRound) {
-              document.getElementById("cfg-volunteer-round").value = data.currentRound;
-          }
-          
           if (deadline) {
             // Convert "2025-06-30 18:00" to datetime-local format
             const dtVal = deadline.replace(" ", "T");
@@ -14643,7 +15010,7 @@
             badge.textContent = "已截止";
             badge.style.background = "#ef4444";
             countdownDiv.innerHTML =
-              '<span class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>互选已截止，可设置延期或执行随机分配</span>';
+              '<span class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>互选已截止，可设置延期或执行自动分配</span>';
           }
         } catch (e) {}
       }
@@ -14680,12 +15047,9 @@
       async function saveVolunteerConfigCombined() {
         const maxInput = document.getElementById("cfg-volunteer-max")?.value.trim();
         const dtInput = document.getElementById("cfg-volunteer-deadline")?.value;
-        const roundSelect = document.getElementById("cfg-volunteer-round")?.value;
-
         const payload = {};
         if (maxInput) payload.maxStudents = maxInput;
         if (dtInput) payload.deadline = dtInput.replace("T", " ");
-        if (roundSelect) payload.currentRound = roundSelect;
 
         if (Object.keys(payload).length === 0) {
           showAlert("warning", "请填写至少一项配置");
@@ -14716,7 +15080,7 @@
       async function randomAssignUnmatched() {
         if (
           !confirm(
-            "确定将所有未填写志愿的学生随机分配给未选满的教师吗？此操作不可撤销。",
+            "确定将所有未填写志愿的学生自动分配给未选满的教师吗？此操作不可撤销。",
           )
         )
           return;
@@ -14736,7 +15100,7 @@
             const failures = result.failures || [];
             showAlert(
               "success",
-              "随机分配完成！共分配 " +
+              "自动分配完成！共分配 " +
                 assigned +
                 " 人。" +
                 (failures.length > 0
@@ -15507,3 +15871,6 @@
     </div>
   </body>
 </html>
+
+
+

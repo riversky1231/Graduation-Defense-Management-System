@@ -2,6 +2,7 @@ package com.example.defensemanagement.config;
 
 import com.example.defensemanagement.interceptor.AdminAuditInterceptor;
 import com.example.defensemanagement.interceptor.AuthInterceptor;
+import com.example.defensemanagement.interceptor.RateLimitInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -16,6 +17,9 @@ public class WebConfig implements WebMvcConfigurer {
     @Autowired
     private AdminAuditInterceptor adminAuditInterceptor;
 
+    @Autowired
+    private RateLimitInterceptor rateLimitInterceptor;
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(authInterceptor)
@@ -24,5 +28,14 @@ public class WebConfig implements WebMvcConfigurer {
 
         registry.addInterceptor(adminAuditInterceptor)
                 .addPathPatterns("/admin/**");
+
+        registry.addInterceptor(rateLimitInterceptor)
+                .addPathPatterns(
+                        "/defense/comment/generate",
+                        "/defense/comment/stream",
+                        "/department/volunteer/match",
+                        "/teacher/volunteer/match",
+                        "/export/**"
+                );
     }
 }

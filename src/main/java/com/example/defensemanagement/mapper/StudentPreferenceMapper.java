@@ -24,6 +24,9 @@ public interface StudentPreferenceMapper {
                                                            @Param("year") Integer year,
                                                            @Param("round") Integer round);
 
+    List<Map<String, Object>> findAllByTeacherAndYear(@Param("teacherId") Long teacherId,
+                                                      @Param("year") Integer year);
+
     List<Map<String, Object>> findByDepartmentAndYear(@Param("departmentId") Long departmentId,
                                                       @Param("year") Integer year,
                                                       @Param("unassignedOnly") Boolean unassignedOnly);

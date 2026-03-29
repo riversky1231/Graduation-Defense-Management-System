@@ -1,0 +1,24 @@
+# Findings
+
+- 当前仓库存在大量未提交修改，不能假设只有本次重构改动。
+- 上次拆分尝试留下了未跟踪文件 `src/main/java/com/example/defensemanagement/controller/admin/AdminUserController.java`。
+- 需要优先检查 `AdminController` 与 `AdminUserController` 是否存在重复映射、缺失依赖或半迁移状态。
+- `AdminUserController` 初始状态存在两个关键问题：缺少 `HttpHeaders` 导入，且部分路由与旧前端 URL 不兼容。
+- 本轮拆分后，`AdminController` 行数降到 492，`AdminUserController` 为 373，用户管理相关职责已完成迁移。
+- `StudentController` 的学生 Excel 导入与模板下载是一个独立切口，伴随的 `getCellValueAsString` / `parseSqlDateFromCell` 也可以一并迁出。
+- 第二轮拆分后，`StudentController` 行数降到 1336，新增 `StudentImportController` 为 486 行。
+- `ExportController` 适合先按“角色端点”拆，而不是先抽公共服务；先迁出组长和教师导出端点，可以在不改 URL 的前提下快速降低控制器体积。
+- 本轮拆分后，`ExportController` 行数降到 933，新增 `LeaderExportController` 为 183 行，`TeacherExportController` 为 243 行。
+- `ExportController` 剩余的大块职责是“小组统分表 + 小组 ZIP”，这一段与单学生导出边界清楚，适合继续独立成控制器。
+- 第四轮拆分后，`ExportController` 行数降到 724，新增 `GroupExportController` 为 330 行；现有 `/export/group/{groupId}/summary` 与 `/export/group/{groupId}/zip` 路由已迁入新控制器。
+- `StudentController` 剩余端点按角色边界也很清楚，`/teacher/...` 这一段可以整体迁出而不改 URL。
+- 第五轮拆分后，`StudentController` 行数降到 573，新增 `TeacherStudentController` 为 695 行；教师侧路由仍保持在 `/department/student/teacher/...`。
+- `ScoreServiceImpl` 中与小组统分、大组候选人和调节系数相关的方法可以整体迁入一个包内辅助类，不必先设计新的 Spring Bean。
+- 为了消除 `ScoreServiceImpl` 这块的循环查库，`TeacherScoreRecordMapper` 新增了 `findByStudentIdsAndYear(...)` 批量查询，主路径改为批量加载，缺失数据再按学生回退单条查询，以兼容旧测试桩。
+- 本轮服务拆分后，`ScoreServiceImpl` 行数降到 405，新增 `ScoreGroupSupport` 为 501 行；`ScoreServiceImplAdjustmentTest` 的回归来自测试只 stub 了单条查询，而不是算法错误。
+- `ScoreController` 的 `largegroup` 端点天然是一组独立职责，迁出后无需改 URL，也不会影响其它评分接口。
+- 本轮控制器拆分后，`ScoreController` 行数降到 369，新增 `LargeGroupScoreController` 为 245 行；现有 `/defense/score/largegroup/...` 路由已迁入新控制器。
+- `GroupTeacherController` 的“单组教师管理/组长设置”和“批量分配/随机分配/配置”边界很清楚，适合按操作类型切开，而不是继续在同一控制器内堆叠。
+- 本轮拆分后，`GroupTeacherController` 行数降到 133，新增 `GroupAssignmentController` 为 387 行；现有 `/department/group/unassigned-teachers`、`/assign-teachers`、`/remove-teachers`、`/config/max-students` 与 `/random-assign/*` 路由已迁入新控制器。
+- 按最初评测报告中的“大文件”清单，当前这批文件已全部降到建议阈值内：`StudentController` 502、`AdminController` 492、`ExportController` 673、`ScoreServiceImpl` 405、`ScoreController` 369、`GroupTeacherController` 133。
+- `ScoreServiceImpl` 的原始 N+1 风险点也已一起处理掉，剩余更硬的待办主要回到安全项和覆盖率项。

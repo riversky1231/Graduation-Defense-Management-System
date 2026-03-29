@@ -42,6 +42,9 @@ public interface TeacherMapper {
     @Update("UPDATE teacher SET name = #{name}, department_id = #{departmentId}, title = #{title}, " +
             "email = #{email}, phone = #{phone}, user_id = #{userId}, updated_time = CURRENT_TIMESTAMP WHERE id = #{id}")
     int update(Teacher teacher);
+
+    @Update("UPDATE teacher SET avatar_path = #{avatarPath}, updated_time = CURRENT_TIMESTAMP WHERE id = #{id}")
+    int updateAvatar(@Param("id") Long id, @Param("avatarPath") String avatarPath);
     
     @Update("UPDATE teacher SET status = #{status}, updated_time = CURRENT_TIMESTAMP WHERE id = #{id}")
     int updateStatus(@Param("id") Long id, @Param("status") Integer status);

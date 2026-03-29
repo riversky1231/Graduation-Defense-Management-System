@@ -1,7 +1,9 @@
 package com.example.defensemanagement.interceptor;
 
+import com.example.defensemanagement.entity.DefenseGroupTeacher;
 import com.example.defensemanagement.entity.User;
 import com.example.defensemanagement.entity.Teacher;
+import com.example.defensemanagement.mapper.DefenseGroupTeacherMapper;
 import com.example.defensemanagement.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -17,6 +19,9 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     @Autowired
     private AuthService authService;
+
+    @Autowired
+    private DefenseGroupTeacherMapper defenseGroupTeacherMapper;
 
     @Override
     public boolean preHandle(@NonNull HttpServletRequest request,
@@ -89,7 +94,7 @@ public class AuthInterceptor implements HandlerInterceptor {
 
             // For all other /admin/ paths (like department management), only super admins
             // are allowed
-            if (currentUser == null || !"SUPER_ADMIN".equals(currentUser.getRole().getName())) {
+            if (currentUser == null || currentUser.getRole() == null || !"SUPER_ADMIN".equals(currentUser.getRole().getName())) {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "权限不足");
                 return false;
             }
@@ -157,7 +162,13 @@ public class AuthInterceptor implements HandlerInterceptor {
                 // 答辩组长专用接口：允许答辩组长访问
                 if (path.startsWith("/department/student/leader/")) {
                     if (currentTeacher != null) {
+                        // 方式1：defense_leader 表中有记录
                         if (authService.isDefenseLeader(currentTeacher.getId(), null)) {
+                            return true;
+                        }
+                        // 方式2：defense_group_teacher 表中 is_leader=1（小组组长）
+                        DefenseGroupTeacher gt = defenseGroupTeacherMapper.findByTeacherId(currentTeacher.getId());
+                        if (gt != null && gt.getIsLeader() != null && gt.getIsLeader() == 1) {
                             return true;
                         }
                         response.sendError(HttpServletResponse.SC_FORBIDDEN, "需要答辩组长权限");

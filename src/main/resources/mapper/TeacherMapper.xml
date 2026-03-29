@@ -13,7 +13,8 @@
         <result property="password" column="password"/>
         <result property="status" column="status"/>
         <result property="userId" column="user_id"/>
-        
+        <result property="avatarPath" column="avatar_path"/>
+
         <association property="department" javaType="com.example.defensemanagement.entity.Department">
             <id property="id" column="department_id"/>
             <result property="name" column="department_name"/>

@@ -253,7 +253,8 @@ public class StudentServiceImpl implements StudentService {
         if (user == null) {
             User newUser = new User();
             newUser.setUsername(newStudentNo);
-            newUser.setPassword(passwordEncoder.encode("123456"));
+            // 初始密码为学号本身，首次登录后应修改
+            newUser.setPassword(passwordEncoder.encode(newStudentNo));
             newUser.setRealName(student.getName());
             newUser.setEmail(student.getEmail());
             newUser.setPhone(student.getPhone());
@@ -280,7 +281,10 @@ public class StudentServiceImpl implements StudentService {
         if (user.getStatus() == null) user.setStatus(1);
         userMapper.update(user);
     }
-public boolean unassignDefenseGroup(Long studentId) {
+
+    @Override
+    @Transactional
+    public boolean unassignDefenseGroup(Long studentId) {
         if (studentId == null) return false;
         // explicitly set defense_group_id to NULL (XML update won't set null values)
         return studentMapper.updateDefenseGroupId(studentId, null) > 0;

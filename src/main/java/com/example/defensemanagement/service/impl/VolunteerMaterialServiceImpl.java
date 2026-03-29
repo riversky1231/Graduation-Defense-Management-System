@@ -46,17 +46,12 @@ public class VolunteerMaterialServiceImpl implements VolunteerMaterialService {
             }
         }
 
-        String metadataContext = composeContext(student, null);
-        if (StringUtils.hasText(metadataContext)) {
-            return new StudentMaterialContext(
-                    metadataContext,
-                    StudentMaterialContext.SOURCE_METADATA_FALLBACK,
-                    StringUtils.hasText(preferredPath) || StringUtils.hasText(fallbackPath)
-                            ? "pdf_unavailable_or_unreadable"
-                            : "pdf_not_uploaded");
-        }
-
-        return new StudentMaterialContext("", StudentMaterialContext.SOURCE_EMPTY, "student_context_blank");
+        // 无可用 PDF 时直接返回空，不用 title/summary 兜底
+        // 原因：title/summary 只有在学生选定导师后才有，用它计算相关度会误导排序
+        String emptyReason = StringUtils.hasText(preferredPath) || StringUtils.hasText(fallbackPath)
+                ? "pdf_unavailable_or_unreadable"
+                : "pdf_not_uploaded";
+        return new StudentMaterialContext("", StudentMaterialContext.SOURCE_EMPTY, emptyReason);
     }
 
     private String resolvePreferredPath(StudentPreference preference, Long teacherId) {

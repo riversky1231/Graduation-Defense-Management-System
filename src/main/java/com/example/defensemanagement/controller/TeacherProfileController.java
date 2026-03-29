@@ -51,8 +51,13 @@ public class TeacherProfileController {
         result.put("teacherId", teacher.getId());
         result.put("teacherNo", teacher.getTeacherNo());
         result.put("teacherName", teacher.getName());
+        result.put("title", teacher.getTitle());
+        result.put("email", teacher.getEmail());
+        result.put("phone", teacher.getPhone());
         result.put("researchDirection", profile != null ? profile.getResearchDirection() : "");
         result.put("enrollmentRequirements", profile != null ? profile.getEnrollmentRequirements() : "");
+        result.put("avatarPath", teacher.getAvatarPath());
+        result.put("avatarUrl", teacher.getAvatarPath() != null ? "/avatar/view?path=" + teacher.getAvatarPath() : null);
         return result;
     }
 

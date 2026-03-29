@@ -67,4 +67,6 @@ public interface StudentMapper {
 
     int countByAdvisorAndYear(@Param("advisorTeacherId") Long advisorTeacherId,
                               @Param("year") Integer year);
+
+    int updateAvatarPath(@Param("id") Long id, @Param("avatarPath") String avatarPath);
 }

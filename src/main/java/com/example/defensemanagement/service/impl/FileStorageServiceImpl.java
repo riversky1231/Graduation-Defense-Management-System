@@ -20,6 +20,8 @@ public class FileStorageServiceImpl implements FileStorageService {
 
     private static final Set<String> SIGNATURE_EXTENSIONS = Set.of("png", "jpg", "jpeg");
     private static final Set<String> SIGNATURE_CONTENT_TYPES = Set.of("image/png", "image/jpeg", "image/jpg");
+    private static final Set<String> AVATAR_EXTENSIONS = Set.of("png", "jpg", "jpeg", "gif", "webp");
+    private static final Set<String> AVATAR_CONTENT_TYPES = Set.of("image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp");
     private static final Set<String> TEMPLATE_EXTENSIONS = Set.of("docx");
     private static final Set<String> TEMPLATE_CONTENT_TYPES = Set.of(
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -105,6 +107,16 @@ public class FileStorageServiceImpl implements FileStorageService {
             }
             if (fileSize > signatureMaxSizeBytes) {
                 throw new IllegalArgumentException("签名文件不能超过 2MB");
+            }
+            return;
+        }
+
+        if (subDir != null && subDir.contains("avatars")) {
+            if (!AVATAR_EXTENSIONS.contains(normalizedExtension) || !AVATAR_CONTENT_TYPES.contains(contentType)) {
+                throw new IllegalArgumentException("头像文件仅支持 PNG、JPG、GIF 或 WebP 图片");
+            }
+            if (fileSize > signatureMaxSizeBytes) {
+                throw new IllegalArgumentException("头像文件不能超过 2MB");
             }
             return;
         }
