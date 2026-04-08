@@ -52,10 +52,9 @@ logging:
 
 app:
   security:
-    # Optional one-time bootstrap secret for seeded privileged accounts that still
-    # carry the shipped seed hash. Supports the legacy INITIAL_ADMIN_PASSWORD name
-    # so existing deployments do not break while moving to the broader scope.
-    initial-privileged-password: ${INITIAL_PRIVILEGED_PASSWORD:${INITIAL_ADMIN_PASSWORD:}}
+    # Local development bootstrap secret for the seeded super-admin account.
+    # Production should use the prod profile, where this default is intentionally blank.
+    initial-privileged-password: ${INITIAL_PRIVILEGED_PASSWORD:${INITIAL_ADMIN_PASSWORD:123456}}
     # Comma-separated list of trusted reverse-proxy IPs (e.g. 10.0.0.1,192.168.1.1).
     # X-Forwarded-For is only trusted when the immediate upstream is in this list.
     # Leave empty to always fall back to getRemoteAddr() (safe default — no spoofing).

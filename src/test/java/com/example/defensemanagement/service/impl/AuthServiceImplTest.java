@@ -32,25 +32,37 @@ class AuthServiceImplTest {
     }
 
     @Test
-    void login_allowsSeededDeptAdminWithConfiguredBootstrapSecret() {
-        User user = buildUser("cs_admin", "DEPT_ADMIN", DEFAULT_SEED_HASH);
-        when(userMapper.findByUsername("cs_admin")).thenReturn(user);
+    void login_allowsSeededSuperAdminWithConfiguredBootstrapSecret() {
+        User user = buildUser("admin", "SUPER_ADMIN", DEFAULT_SEED_HASH);
+        when(userMapper.findByUsername("admin")).thenReturn(user);
         ReflectionTestUtils.setField(authService, "initialPrivilegedPassword", "bootstrap-secret");
 
-        User result = authService.login("cs_admin", "bootstrap-secret");
+        User result = authService.login("admin", "bootstrap-secret");
 
         assertSame(user, result);
     }
 
     @Test
-    void login_rejectsSeededPrivilegedAccountWithoutBootstrapSecret() {
-        User user = buildUser("cs_admin", "DEPT_ADMIN", DEFAULT_SEED_HASH);
+    void login_rejectsSeededSuperAdminWithoutBootstrapSecret() {
+        User user = buildUser("admin", "SUPER_ADMIN", DEFAULT_SEED_HASH);
+        when(userMapper.findByUsername("admin")).thenReturn(user);
+        ReflectionTestUtils.setField(authService, "initialPrivilegedPassword", "");
+
+        User result = authService.login("admin", "whatever");
+
+        assertNull(result);
+    }
+
+    @Test
+    void login_acceptsSeededDeptAdminWithRegularPasswordMatch() {
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        User user = buildUser("cs_admin", "DEPT_ADMIN", encoder.encode("123456"));
         when(userMapper.findByUsername("cs_admin")).thenReturn(user);
         ReflectionTestUtils.setField(authService, "initialPrivilegedPassword", "");
 
-        User result = authService.login("cs_admin", "whatever");
+        User result = authService.login("cs_admin", "123456");
 
-        assertNull(result);
+        assertSame(user, result);
     }
 
     @Test

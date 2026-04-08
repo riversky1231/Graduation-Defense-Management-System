@@ -42,12 +42,12 @@ public class AuthServiceImpl implements AuthService {
         User user = userMapper.findByUsername(username);
 
         if (user != null && Integer.valueOf(1).equals(user.getStatus()) && user.getPassword() != null) {
-            if (PasswordSecurityUtils.isDefaultSeedPasswordHash(user.getPassword()) && isPrivilegedUser(user)) {
+            if (PasswordSecurityUtils.isDefaultSeedPasswordHash(user.getPassword()) && isBootstrapRestrictedSuperAdmin(user)) {
                 if (StringUtils.hasText(initialPrivilegedPassword)
                         && PasswordSecurityUtils.constantTimeEquals(password, initialPrivilegedPassword)) {
                     return user;
                 }
-                log.warn("Rejected privileged login with uninitialized seed password: username={}", username);
+                log.warn("Rejected super-admin login with uninitialized bootstrap secret: username={}", username);
                 return null;
             }
             if (passwordEncoder.matches(password, user.getPassword())) {
@@ -139,8 +139,8 @@ public class AuthServiceImpl implements AuthService {
         return leader != null;
     }
 
-    private boolean isPrivilegedUser(User user) {
+    private boolean isBootstrapRestrictedSuperAdmin(User user) {
         return user.getRole() != null
-                && ("SUPER_ADMIN".equals(user.getRole().getName()) || "DEPT_ADMIN".equals(user.getRole().getName()));
+                && "SUPER_ADMIN".equals(user.getRole().getName());
     }
 }
