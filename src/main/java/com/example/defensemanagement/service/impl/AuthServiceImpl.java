@@ -7,11 +7,14 @@ import com.example.defensemanagement.mapper.UserMapper;
 import com.example.defensemanagement.mapper.TeacherMapper;
 import com.example.defensemanagement.mapper.DefenseLeaderMapper;
 import com.example.defensemanagement.service.AuthService;
+import com.example.defensemanagement.util.PasswordSecurityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 
@@ -29,6 +32,9 @@ public class AuthServiceImpl implements AuthService {
     @Autowired
     private DefenseLeaderMapper defenseLeaderMapper;
 
+    @Value("${app.security.initial-privileged-password:}")
+    private String initialPrivilegedPassword;
+
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Override
@@ -36,17 +42,15 @@ public class AuthServiceImpl implements AuthService {
         User user = userMapper.findByUsername(username);
 
         if (user != null && Integer.valueOf(1).equals(user.getStatus()) && user.getPassword() != null) {
-            if (passwordEncoder.matches(password, user.getPassword())) {
-                return user;
+            if (PasswordSecurityUtils.isDefaultSeedPasswordHash(user.getPassword()) && isPrivilegedUser(user)) {
+                if (StringUtils.hasText(initialPrivilegedPassword)
+                        && PasswordSecurityUtils.constantTimeEquals(password, initialPrivilegedPassword)) {
+                    return user;
+                }
+                log.warn("Rejected privileged login with uninitialized seed password: username={}", username);
+                return null;
             }
-            // 兼容初始化数据的默认管理员密码，如匹配失败但输入为默认口令，则自动重写为最新 bcrypt
-            // 注意：这不是弱密码创建，而是对 data.sql 中预置的 admin 账号做一次性密码哈希升级
-            // 升级后 admin 账号的密码哈希将被替换为 BCrypt 格式，后续登录走正常 BCrypt 校验
-            if ("admin".equals(username) && "123456".equals(password)) {
-                String encodedPassword = passwordEncoder.encode(password);
-                userMapper.updatePassword(user.getId(), encodedPassword);
-                user.setPassword(encodedPassword);
-                log.warn("Admin password hash was upgraded during login for username={}", username);
+            if (passwordEncoder.matches(password, user.getPassword())) {
                 return user;
             }
         }
@@ -133,5 +137,10 @@ public class AuthServiceImpl implements AuthService {
         }
         DefenseLeader leader = defenseLeaderMapper.findByTeacherIdAndYear(teacherId, year);
         return leader != null;
+    }
+
+    private boolean isPrivilegedUser(User user) {
+        return user.getRole() != null
+                && ("SUPER_ADMIN".equals(user.getRole().getName()) || "DEPT_ADMIN".equals(user.getRole().getName()));
     }
 }

@@ -143,24 +143,40 @@ public class ConfigServiceImpl implements ConfigService {
     @Override
     @Transactional
     public void setPromptTemplate(String templateKey, String templateContent) {
-        // 根据传入的模板Key判断是论文还是设计
-        String configKey = templateKey.toUpperCase().contains("PAPER") ? KEY_PAPER_PROMPT_TEMPLATE
-                : KEY_DESIGN_PROMPT_TEMPLATE;
-
-        String description = templateKey.toUpperCase().contains("PAPER") ? "本科毕业论文答辩小组评语提示词模板" : "本科毕业设计答辩小组评语提示词模板";
-
+        String normalizedTemplateKey = normalizeTemplateKey(templateKey);
+        String configKey = resolvePromptConfigKey(normalizedTemplateKey);
+        String description = "PAPER_PROMPT".equals(normalizedTemplateKey)
+                ? "本科毕业论文答辩小组评语提示词模板"
+                : "本科毕业设计答辩小组评语提示词模板";
         saveConfig(configKey, templateContent, description);
     }
 
     @Override
     public String getPromptTemplate(String templateKey) {
-        String configKey = templateKey.toUpperCase().contains("PAPER") ? KEY_PAPER_PROMPT_TEMPLATE
-                : KEY_DESIGN_PROMPT_TEMPLATE;
+        String configKey = resolvePromptConfigKey(normalizeTemplateKey(templateKey));
         return getConfigValue(configKey);
     }
 
     @Override
     public List<Integer> getAllYears() {
         return studentMapper.findAllYears();
+    }
+
+    private String normalizeTemplateKey(String templateKey) {
+        if (templateKey == null || templateKey.trim().isEmpty()) {
+            throw new IllegalArgumentException("templateKey 不能为空");
+        }
+        return templateKey.trim().toUpperCase();
+    }
+
+    private String resolvePromptConfigKey(String templateKey) {
+        switch (templateKey) {
+            case "PAPER_PROMPT":
+                return KEY_PAPER_PROMPT_TEMPLATE;
+            case "DESIGN_PROMPT":
+                return KEY_DESIGN_PROMPT_TEMPLATE;
+            default:
+                throw new IllegalArgumentException("非法模板类型: " + templateKey);
+        }
     }
 }

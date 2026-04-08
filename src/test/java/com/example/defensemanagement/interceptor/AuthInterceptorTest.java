@@ -3,7 +3,14 @@ package com.example.defensemanagement.interceptor;
 import com.example.defensemanagement.entity.Role;
 import com.example.defensemanagement.entity.Teacher;
 import com.example.defensemanagement.entity.User;
+import com.example.defensemanagement.interceptor.auth.AdminPathValidator;
+import com.example.defensemanagement.interceptor.auth.DefensePathValidator;
+import com.example.defensemanagement.interceptor.auth.DepartmentPathValidator;
+import com.example.defensemanagement.interceptor.auth.StudentPathValidator;
+import com.example.defensemanagement.interceptor.auth.TeacherProfilePathValidator;
+import com.example.defensemanagement.interceptor.auth.TeacherVolunteerPathValidator;
 import com.example.defensemanagement.service.AuthService;
+import com.example.defensemanagement.util.PasswordSecurityUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,7 +18,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -31,9 +37,13 @@ class AuthInterceptorTest {
 
     @BeforeEach
     void setUp() {
-        interceptor = new AuthInterceptor();
-        ReflectionTestUtils.setField(interceptor, "authService", authService);
-        ReflectionTestUtils.setField(interceptor, "defenseGroupTeacherMapper", defenseGroupTeacherMapper);
+        interceptor = new AuthInterceptor(
+                new AdminPathValidator(),
+                new StudentPathValidator(),
+                new TeacherVolunteerPathValidator(),
+                new TeacherProfilePathValidator(),
+                new DepartmentPathValidator(authService, defenseGroupTeacherMapper),
+                new DefensePathValidator(authService));
     }
 
     @Test
@@ -85,6 +95,43 @@ class AuthInterceptorTest {
 
         assertTrue(allowed);
         assertEquals(200, response.getStatus());
+    }
+
+    @Test
+    void publicPathBypassesAuthentication() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/css/app.css");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        boolean allowed = interceptor.preHandle(request, response, new Object());
+
+        assertTrue(allowed);
+        assertEquals(200, response.getStatus());
+    }
+
+    @Test
+    void missingSessionRedirectsToContextAwareLoginPath() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/app/student/profile");
+        request.setContextPath("/app");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        boolean allowed = interceptor.preHandle(request, response, new Object());
+
+        assertFalse(allowed);
+        assertEquals("/app/login", response.getRedirectedUrl());
+    }
+
+    @Test
+    void forcedPasswordChangeRedirectsProtectedPaths() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/student/profile");
+        request.setContextPath("/app");
+        request.getSession(true).setAttribute("currentUser", userWithRole("STUDENT"));
+        request.getSession().setAttribute(PasswordSecurityUtils.FORCE_PASSWORD_CHANGE_SESSION_KEY, Boolean.TRUE);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        boolean allowed = interceptor.preHandle(request, response, new Object());
+
+        assertFalse(allowed);
+        assertEquals("/app/force-password-change", response.getRedirectedUrl());
     }
 
     private User userWithRole(String roleName) {

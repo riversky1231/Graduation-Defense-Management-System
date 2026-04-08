@@ -30,6 +30,11 @@ public interface DefenseGroupTeacherMapper {
      * 获取所有小组的教师关联（用于大组答辩时所有教师打分）
      */
     List<DefenseGroupTeacher> findAll();
+
+    /**
+     * 批量获取指定小组的教师关联。
+     */
+    List<DefenseGroupTeacher> findByGroupIds(@Param("groupIds") List<Long> groupIds);
 }
 
 

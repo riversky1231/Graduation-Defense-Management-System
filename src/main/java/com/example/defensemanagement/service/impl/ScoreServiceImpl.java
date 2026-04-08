@@ -23,15 +23,15 @@ import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.util.DoubleSummaryStatistics;
 import java.util.List;
 import java.util.Map;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.ArrayList;
+
+import static com.example.defensemanagement.service.impl.ScoreMathHelper.refreshTotalGrade;
+import static com.example.defensemanagement.service.impl.ScoreMathHelper.roundDefault;
 
 @Service
 public class ScoreServiceImpl implements ScoreService {
@@ -58,6 +58,9 @@ public class ScoreServiceImpl implements ScoreService {
 
     @Autowired
     private DefenseGroupTeacherMapper defenseGroupTeacherMapper;
+
+    @Autowired
+    private ScoreGroupSupport scoreGroupSupport;
     @Override
     @Transactional
     public void setAdvisorScore(Long studentId, Integer year, Integer score) {
@@ -236,27 +239,27 @@ public class ScoreServiceImpl implements ScoreService {
     @Override
     @Transactional
     public void finalizeGroupScores(Long defenseGroupId, Integer year, Integer largeGroupScore) {
-        groupSupport().finalizeGroupScores(defenseGroupId, year, largeGroupScore);
+        scoreGroupSupport.finalizeGroupScores(defenseGroupId, year, largeGroupScore);
     }
 
     @Override
     public Map<String, Object> getGroupAdjustmentFactor(Long groupId, Integer year) {
-        return groupSupport().getGroupAdjustmentFactor(groupId, year);
+        return scoreGroupSupport.getGroupAdjustmentFactor(groupId, year);
     }
 
     @Override
     public Map<String, Object> getTeacherGroupStudents(Long teacherId, Integer year) {
-        return groupSupport().getTeacherGroupStudents(teacherId, year);
+        return scoreGroupSupport.getTeacherGroupStudents(teacherId, year);
     }
 
     @Override
     public Map<String, Object> getAllGroupStudentsForSuperAdmin(Integer year) {
-        return groupSupport().getAllGroupStudentsForSuperAdmin(year);
+        return scoreGroupSupport.getAllGroupStudentsForSuperAdmin(year);
     }
 
     @Override
     public List<Map<String, Object>> getLargeGroupCandidates(Integer year, Long currentTeacherId) {
-        return groupSupport().getLargeGroupCandidates(year, currentTeacherId);
+        return scoreGroupSupport.getLargeGroupCandidates(year, currentTeacherId);
     }
 
     @Override
@@ -264,6 +267,9 @@ public class ScoreServiceImpl implements ScoreService {
     public void saveLargeGroupScore(Long studentId, Long teacherId, Integer year, Integer score) {
         if (studentId == null || teacherId == null || year == null || score == null) {
             throw new IllegalArgumentException("学生ID/教师ID/年份/分数不能为空");
+        }
+        if (score < 0 || score > 100) {
+            throw new IllegalArgumentException("分数必须在0-100之间");
         }
         
         LargeGroupScore existing = largeGroupScoreMapper.findByStudentIdAndTeacherIdAndYear(studentId, teacherId, year);
@@ -280,7 +286,7 @@ public class ScoreServiceImpl implements ScoreService {
         }
         
         // 自动更新该小组的调节系数和所有学生的最终答辩成绩
-        groupSupport().updateGroupAdjustmentFactor(studentId, year);
+        scoreGroupSupport.updateGroupAdjustmentFactor(studentId, year);
     }
 
     @Override
@@ -296,7 +302,7 @@ public class ScoreServiceImpl implements ScoreService {
                     .mapToInt(LargeGroupScore::getScore)
                     .average()
                     .orElse(0.0);
-            result.put("avgScore", round(avgScore, 1));
+            result.put("avgScore", roundDefault(avgScore));
         } else {
             result.put("avgScore", null);
         }
@@ -343,7 +349,7 @@ public class ScoreServiceImpl implements ScoreService {
                     .mapToInt(LargeGroupScore::getScore)
                     .average()
                     .orElse(0.0);
-            result.put("avgScore", round(avgScore, 1));
+            result.put("avgScore", roundDefault(avgScore));
         } else {
             result.put("avgScore", null);
         }
@@ -364,13 +370,16 @@ public class ScoreServiceImpl implements ScoreService {
         
         LargeGroupScore largeGroupScore;
         if (scoreId != null) {
-            // 如果提供了scoreId，尝试查找现有记录
-            largeGroupScore = largeGroupScoreMapper.findByStudentIdAndTeacherIdAndYear(studentId, teacherId, year);
-            if (largeGroupScore == null || !largeGroupScore.getId().equals(scoreId)) {
-                throw new IllegalArgumentException("打分记录不存在或不匹配");
+            largeGroupScore = largeGroupScoreMapper.findById(scoreId);
+            if (largeGroupScore == null) {
+                throw new IllegalArgumentException("打分记录不存在");
+            }
+            if (!studentId.equals(largeGroupScore.getStudentId())
+                    || !teacherId.equals(largeGroupScore.getTeacherId())
+                    || !year.equals(largeGroupScore.getYear())) {
+                throw new IllegalArgumentException("打分记录与请求参数不匹配");
             }
         } else {
-            // 如果没有提供scoreId，查找现有记录
             largeGroupScore = largeGroupScoreMapper.findByStudentIdAndTeacherIdAndYear(studentId, teacherId, year);
         }
         
@@ -388,17 +397,12 @@ public class ScoreServiceImpl implements ScoreService {
             largeGroupScoreMapper.update(largeGroupScore);
         }
         
-        // 自动更新该小组的调节系数和所有学生的最终答辩成绩
-        groupSupport().updateGroupAdjustmentFactor(studentId, year);
+        scoreGroupSupport.updateGroupAdjustmentFactor(studentId, year);
     }
 
     @Override
     public Double calculateGroupAvgScore(Long studentId, Integer year) {
-        return groupSupport().calculateGroupAvgScore(studentId, year);
-    }
-
-    private double round(double value, int scale) {
-        return BigDecimal.valueOf(value).setScale(scale, RoundingMode.HALF_UP).doubleValue();
+        return scoreGroupSupport.calculateGroupAvgScore(studentId, year);
     }
 
     /**
@@ -425,23 +429,10 @@ public class ScoreServiceImpl implements ScoreService {
         if (finalScore.getFinalDefenseScore() != null
                 && finalScore.getAdvisorScore() != null
                 && finalScore.getReviewerScore() != null) {
-            double totalGrade = finalScore.getAdvisorScore() * 0.3
-                    + finalScore.getReviewerScore() * 0.3
-                    + finalScore.getFinalDefenseScore() * 0.4;
-            finalScore.setTotalGrade(round(totalGrade, 1));
+            refreshTotalGrade(finalScore, finalScore.getFinalDefenseScore());
         }
         studentFinalScoreMapper.update(finalScore);
     }
 
-    private ScoreGroupSupport groupSupport() {
-        return new ScoreGroupSupport(
-                teacherScoreRecordMapper,
-                studentFinalScoreMapper,
-                studentMapper,
-                largeGroupScoreMapper,
-                defenseGroupMapper,
-                defenseGroupTeacherMapper
-        );
-    }
 }
 

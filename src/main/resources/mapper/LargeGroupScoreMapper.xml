@@ -58,6 +58,38 @@
         ORDER BY lgs.student_id, lgs.teacher_id
     </select>
 
+    <select id="findById" resultMap="LargeGroupScoreMap">
+        SELECT lgs.*,
+               s.name as student_name, s.student_no, s.defense_type, s.title, s.defense_group_id,
+               t.name as teacher_name, t.teacher_no
+        FROM large_group_score lgs
+        LEFT JOIN t_student s ON lgs.student_id = s.id
+        LEFT JOIN teacher t ON lgs.teacher_id = t.id
+        WHERE lgs.id = #{id}
+    </select>
+
+    <!-- 批量查询：按学生ID列表和年份 -->
+    <select id="findByStudentIdsAndYear" resultMap="LargeGroupScoreMap">
+        SELECT lgs.*,
+               s.name as student_name, s.student_no, s.defense_type, s.title, s.defense_group_id,
+               t.name as teacher_name, t.teacher_no
+        FROM large_group_score lgs
+        LEFT JOIN t_student s ON lgs.student_id = s.id
+        LEFT JOIN teacher t ON lgs.teacher_id = t.id
+        <where>
+            <if test="studentIds != null and studentIds.size() > 0">
+                AND lgs.student_id IN
+                <foreach collection="studentIds" item="sid" open="(" separator="," close=")">
+                    #{sid}
+                </foreach>
+            </if>
+            <if test="year != null">
+                AND lgs.year = #{year}
+            </if>
+        </where>
+        ORDER BY lgs.student_id, lgs.teacher_id
+    </select>
+
     <insert id="insert" parameterType="com.example.defensemanagement.entity.LargeGroupScore" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO large_group_score (student_id, teacher_id, year, score, created_time, updated_time)
         VALUES (#{studentId}, #{teacherId}, #{year}, #{score}, NOW(), NOW())

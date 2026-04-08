@@ -4,6 +4,8 @@ import com.example.defensemanagement.security.SessionAuthenticationEntryPoint;
 import com.example.defensemanagement.security.SessionAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -13,17 +15,23 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
     private final SessionAuthenticationFilter sessionAuthenticationFilter;
     private final SessionAuthenticationEntryPoint sessionAuthenticationEntryPoint;
+    private final Environment environment;
 
     public SecurityConfig(SessionAuthenticationFilter sessionAuthenticationFilter,
-                          SessionAuthenticationEntryPoint sessionAuthenticationEntryPoint) {
+                          SessionAuthenticationEntryPoint sessionAuthenticationEntryPoint,
+                          Environment environment) {
         this.sessionAuthenticationFilter = sessionAuthenticationFilter;
         this.sessionAuthenticationEntryPoint = sessionAuthenticationEntryPoint;
+        this.environment = environment;
     }
 
     @Bean
@@ -56,9 +64,7 @@ public class SecurityConfig {
                             .maxAgeInSeconds(31536000);
                 })
                 .authorizeRequests(authz -> authz
-                        .antMatchers("/login", "/captcha", "/image.png", "/css/**", "/js/**", "/images/**",
-                                "/error", "/health", "/actuator/health", "/actuator/info",
-                                "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+                        .antMatchers(publicPaths()).permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(exceptionHandling -> exceptionHandling
                         .authenticationEntryPoint(sessionAuthenticationEntryPoint))
@@ -71,5 +77,26 @@ public class SecurityConfig {
                 .addFilterBefore(sessionAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    private String[] publicPaths() {
+        List<String> paths = new ArrayList<>(List.of(
+                "/login",
+                "/captcha",
+                "/image.png",
+                "/css/**",
+                "/js/**",
+                "/images/**",
+                "/error",
+                "/health",
+                "/actuator/health",
+                "/actuator/info"
+        ));
+        if (!environment.acceptsProfiles(Profiles.of("prod"))) {
+            paths.add("/swagger-ui/**");
+            paths.add("/swagger-ui.html");
+            paths.add("/v3/api-docs/**");
+        }
+        return paths.toArray(new String[0]);
     }
 }

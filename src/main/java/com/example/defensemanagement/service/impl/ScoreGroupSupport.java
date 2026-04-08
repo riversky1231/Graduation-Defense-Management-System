@@ -12,21 +12,28 @@ import com.example.defensemanagement.mapper.LargeGroupScoreMapper;
 import com.example.defensemanagement.mapper.StudentFinalScoreMapper;
 import com.example.defensemanagement.mapper.StudentMapper;
 import com.example.defensemanagement.mapper.TeacherScoreRecordMapper;
+import org.springframework.stereotype.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.DoubleSummaryStatistics;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.HashSet;
 import java.util.stream.Collectors;
 
+import static com.example.defensemanagement.service.impl.ScoreMathHelper.*;
+
+/**
+ * Group-level score operations: finalization, adjustment factor, candidate selection.
+ *
+ * Delegates pure-math operations to {@link ScoreMathHelper} and data-loading to
+ * {@link ScoreGroupQueries}. Domain logic stays here.
+ */
+@Component
 final class ScoreGroupSupport {
 
     private static final Logger log = LoggerFactory.getLogger(ScoreGroupSupport.class);
@@ -37,19 +44,22 @@ final class ScoreGroupSupport {
     private final LargeGroupScoreMapper largeGroupScoreMapper;
     private final DefenseGroupMapper defenseGroupMapper;
     private final DefenseGroupTeacherMapper defenseGroupTeacherMapper;
+    private final ScoreGroupQueries queries;
 
     ScoreGroupSupport(TeacherScoreRecordMapper teacherScoreRecordMapper,
                       StudentFinalScoreMapper studentFinalScoreMapper,
                       StudentMapper studentMapper,
                       LargeGroupScoreMapper largeGroupScoreMapper,
                       DefenseGroupMapper defenseGroupMapper,
-                      DefenseGroupTeacherMapper defenseGroupTeacherMapper) {
+                      DefenseGroupTeacherMapper defenseGroupTeacherMapper,
+                      ScoreGroupQueries queries) {
         this.teacherScoreRecordMapper = teacherScoreRecordMapper;
         this.studentFinalScoreMapper = studentFinalScoreMapper;
         this.studentMapper = studentMapper;
         this.largeGroupScoreMapper = largeGroupScoreMapper;
         this.defenseGroupMapper = defenseGroupMapper;
         this.defenseGroupTeacherMapper = defenseGroupTeacherMapper;
+        this.queries = queries;
     }
 
     void finalizeGroupScores(Long defenseGroupId, Integer year, Integer largeGroupScore) {
@@ -61,8 +71,9 @@ final class ScoreGroupSupport {
             return;
         }
 
-        Map<Long, List<TeacherScoreRecord>> recordsByStudent = loadTeacherScoreMap(students, year);
-        Map<Long, StudentFinalScore> finalScoresByStudent = loadFinalScores(students, year);
+        Map<Long, List<TeacherScoreRecord>> recordsByStudent = queries.loadTeacherScoreMap(students, year);
+        Map<Long, StudentFinalScore> finalScoresByStudent = queries.loadFinalScores(students, year);
+        Map<Long, Double> groupAverageByStudent = new HashMap<>();
 
         double championAvgScore = 0.0;
         for (Student student : students) {
@@ -70,28 +81,24 @@ final class ScoreGroupSupport {
             if (rawAverage == null) {
                 continue;
             }
-
-            double groupAvg = round(rawAverage, 2);
-            StudentFinalScore finalScore = ensureFinalScore(finalScoresByStudent, student.getId(), year);
-            finalScore.setGroupAvgScore((int) Math.round(groupAvg));
-
-            if (groupAvg > championAvgScore) {
-                championAvgScore = groupAvg;
+            groupAverageByStudent.put(student.getId(), rawAverage);
+            StudentFinalScore finalScore = queries.ensureFinalScore(finalScoresByStudent, student.getId(), year);
+            finalScore.setGroupAvgScore(roundToIntegerScore(rawAverage));
+            if (rawAverage > championAvgScore) {
+                championAvgScore = rawAverage;
             }
         }
 
-        double adjustmentFactor = 1.0;
-        if (largeGroupScore != null && championAvgScore > 0) {
-            adjustmentFactor = round(largeGroupScore / championAvgScore, 3);
-        }
+        Double computedAdjustmentFactor = ScoreMathHelper.computeAdjustmentFactor(largeGroupScore, championAvgScore);
+        double adjustmentFactor = computedAdjustmentFactor != null ? computedAdjustmentFactor : 1.0;
 
         for (Student student : students) {
             StudentFinalScore finalScore = finalScoresByStudent.get(student.getId());
-            if (finalScore == null || finalScore.getGroupAvgScore() == null) {
+            Double rawGroupAverage = groupAverageByStudent.get(student.getId());
+            if (finalScore == null || rawGroupAverage == null) {
                 continue;
             }
-
-            double finalDefenseScore = round(finalScore.getGroupAvgScore() * adjustmentFactor, 2);
+            double finalDefenseScore = computeFinalDefenseScore(rawGroupAverage, adjustmentFactor);
             finalScore.setAdjustmentFactor(adjustmentFactor);
             finalScore.setLargeGroupScore(largeGroupScore);
             finalScore.setFinalDefenseScore(finalDefenseScore);
@@ -142,80 +149,23 @@ final class ScoreGroupSupport {
         result.put("groupName", group != null ? group.getName() : "");
         result.put("isLeader", groupTeacher.getIsLeader() != null && groupTeacher.getIsLeader() == 1);
 
-        List<Student> students = filterStudentsByYear(studentMapper.findByDefenseGroupId(groupId), year);
+        List<Student> students = queries.filterStudentsByYear(studentMapper.findByDefenseGroupId(groupId), year);
         List<DefenseGroupTeacher> groupTeachers = defenseGroupTeacherMapper.findByGroupId(groupId);
         int totalTeachers = groupTeachers != null ? groupTeachers.size() : 0;
-        Map<Long, List<TeacherScoreRecord>> recordsByStudent = loadTeacherScoreMap(students, year);
+        Map<Long, List<TeacherScoreRecord>> recordsByStudent = queries.loadTeacherScoreMap(students, year);
+        Student topStudent = findTopStudent(students, recordsByStudent, totalTeachers);
+        double topAvgScore = topStudent != null
+                ? averageTotalScore(recordsByStudent.getOrDefault(topStudent.getId(), Collections.emptyList()))
+                : -1;
 
-        Student topStudent = null;
-        double topAvgScore = -1;
-        for (Student student : students) {
-            List<TeacherScoreRecord> records = recordsByStudent.getOrDefault(student.getId(), Collections.emptyList());
-            if (records.size() < totalTeachers || totalTeachers <= 0) {
-                continue;
-            }
-            Double avgScore = averageTotalScore(records);
-            if (avgScore != null && avgScore > topAvgScore) {
-                topAvgScore = avgScore;
-                topStudent = student;
-            }
-        }
-
-        Double groupAdjustmentFactor = null;
-        if (topStudent != null && topAvgScore > 0) {
-            List<LargeGroupScore> largeScores = largeGroupScoreMapper.findByStudentIdAndYear(topStudent.getId(), year);
-            if (largeScores != null && !largeScores.isEmpty()) {
-                double largeGroupAvgScore = largeScores.stream()
-                        .filter(score -> score.getScore() != null)
-                        .mapToInt(LargeGroupScore::getScore)
-                        .average()
-                        .orElse(0.0);
-                groupAdjustmentFactor = round(largeGroupAvgScore / topAvgScore, 3);
-            }
-        }
+        Double groupAdjustmentFactor = computeAdjustmentFactor(topStudent, topAvgScore, year);
         result.put("groupAdjustmentFactor", groupAdjustmentFactor);
 
         List<Map<String, Object>> studentList = new ArrayList<>();
         for (Student student : students) {
             List<TeacherScoreRecord> records = recordsByStudent.getOrDefault(student.getId(), Collections.emptyList());
-
-            Map<String, Object> studentInfo = new HashMap<>();
-            studentInfo.put("id", student.getId());
-            studentInfo.put("studentNo", student.getStudentNo());
-            studentInfo.put("name", student.getName());
-            studentInfo.put("classInfo", student.getClassInfo());
-            studentInfo.put("departmentName", resolveDepartmentName(student));
-            studentInfo.put("defenseType", student.getDefenseType());
-            studentInfo.put("title", student.getTitle());
-            studentInfo.put("defenseYear", student.getDefenseYear());
-            studentInfo.put("scoredTeachersCount", records.size());
-            studentInfo.put("totalTeachersCount", totalTeachers);
-
-            TeacherScoreRecord myScore = null;
-            for (TeacherScoreRecord record : records) {
-                if (record.getTeacherId() != null && record.getTeacherId().equals(teacherId)) {
-                    myScore = record;
-                    break;
-                }
-            }
-            studentInfo.put("hasScored", myScore != null);
-            studentInfo.put("myScore", myScore);
-
-            if (records.size() >= totalTeachers && totalTeachers > 0) {
-                Double studentAvgScore = averageTotalScore(records);
-                studentAvgScore = studentAvgScore == null ? null : round(studentAvgScore, 1);
-                studentInfo.put("avgScore", studentAvgScore);
-                studentInfo.put("allScored", true);
-                studentInfo.put("adjustmentFactor", groupAdjustmentFactor);
-                studentInfo.put("finalDefenseScore", groupAdjustmentFactor != null && studentAvgScore != null
-                        ? round(studentAvgScore * groupAdjustmentFactor, 1) : null);
-            } else {
-                studentInfo.put("avgScore", null);
-                studentInfo.put("allScored", false);
-                studentInfo.put("adjustmentFactor", groupAdjustmentFactor);
-                studentInfo.put("finalDefenseScore", null);
-            }
-
+            Map<String, Object> studentInfo = buildStudentInfo(student, records, totalTeachers,
+                    groupAdjustmentFactor, teacherId);
             studentList.add(studentInfo);
         }
 
@@ -233,48 +183,22 @@ final class ScoreGroupSupport {
 
         List<Map<String, Object>> groupList = new ArrayList<>();
         for (DefenseGroup group : allGroups) {
-            List<Student> students = filterStudentsByYear(studentMapper.findByDefenseGroupId(group.getId()), year);
+            List<Student> students = queries.filterStudentsByYear(studentMapper.findByDefenseGroupId(group.getId()), year);
             if (students.isEmpty()) {
                 continue;
             }
 
             List<DefenseGroupTeacher> groupTeachers = defenseGroupTeacherMapper.findByGroupId(group.getId());
             int totalTeachers = groupTeachers != null ? groupTeachers.size() : 0;
-            Map<Long, List<TeacherScoreRecord>> recordsByStudent = loadTeacherScoreMap(students, year);
-            Map<Long, StudentFinalScore> finalScoresByStudent = loadFinalScores(students, year);
+            Map<Long, List<TeacherScoreRecord>> recordsByStudent = queries.loadTeacherScoreMap(students, year);
+            Map<Long, StudentFinalScore> finalScoresByStudent = queries.loadFinalScores(students, year);
 
             List<Map<String, Object>> studentList = new ArrayList<>();
             for (Student student : students) {
                 List<TeacherScoreRecord> records = recordsByStudent.getOrDefault(student.getId(), Collections.emptyList());
                 StudentFinalScore finalScore = finalScoresByStudent.get(student.getId());
-
-                Map<String, Object> studentInfo = new HashMap<>();
-                studentInfo.put("id", student.getId());
-                studentInfo.put("studentNo", student.getStudentNo());
-                studentInfo.put("name", student.getName());
-                studentInfo.put("departmentName", resolveDepartmentName(student));
-                studentInfo.put("defenseType", student.getDefenseType());
-                studentInfo.put("title", student.getTitle());
-                studentInfo.put("scoredTeachersCount", records.size());
-                studentInfo.put("totalTeachersCount", totalTeachers);
-                studentInfo.put("hasScored", !records.isEmpty());
-
-                if (records.size() >= totalTeachers && totalTeachers > 0) {
-                    Double avgScore = averageTotalScore(records);
-                    studentInfo.put("avgScore", avgScore == null ? null : round(avgScore, 1));
-                    studentInfo.put("allScored", true);
-                } else {
-                    studentInfo.put("avgScore", null);
-                    studentInfo.put("allScored", false);
-                }
-
-                if (finalScore != null) {
-                    studentInfo.put("adjustmentFactor", finalScore.getAdjustmentFactor());
-                    studentInfo.put("finalDefenseScore", finalScore.getFinalDefenseScore());
-                } else {
-                    studentInfo.put("adjustmentFactor", null);
-                    studentInfo.put("finalDefenseScore", null);
-                }
+                Map<String, Object> studentInfo = buildSuperAdminStudentInfo(
+                        student, records, totalTeachers, finalScore);
                 studentList.add(studentInfo);
             }
 
@@ -298,95 +222,48 @@ final class ScoreGroupSupport {
             return candidates;
         }
 
-        List<DefenseGroupTeacher> allGroupTeachers = defenseGroupTeacherMapper.findAll();
-        Map<Long, Integer> deptTeacherCountMap = new HashMap<>();
-        if (allGroupTeachers != null) {
-            Map<Long, Long> groupDeptMap = new HashMap<>();
-            for (DefenseGroup group : groups) {
-                if (group.getDepartmentId() != null) {
-                    groupDeptMap.put(group.getId(), group.getDepartmentId());
-                }
-            }
+        // 批量加载所有小组的学生（消除 N+1 查询）
+        List<Long> groupIds = groups.stream()
+                .map(DefenseGroup::getId)
+                .collect(Collectors.toList());
+        Map<Long, List<Student>> studentsByGroup = queries.loadStudentsByGroupIds(groupIds, year);
 
-            Map<Long, Set<Long>> deptTeachersSet = new HashMap<>();
-            for (DefenseGroupTeacher teacher : allGroupTeachers) {
-                Long departmentId = groupDeptMap.get(teacher.getGroupId());
-                if (departmentId != null && teacher.getTeacherId() != null) {
-                    deptTeachersSet.computeIfAbsent(departmentId, key -> new HashSet<>()).add(teacher.getTeacherId());
-                }
-            }
-
-            for (Map.Entry<Long, Set<Long>> entry : deptTeachersSet.entrySet()) {
-                deptTeacherCountMap.put(entry.getKey(), entry.getValue().size());
-            }
-        }
+        // 批量加载所有大组答辩得分
+        Set<Long> allStudentIds = studentsByGroup.values().stream()
+                .flatMap(List::stream)
+                .map(Student::getId)
+                .collect(Collectors.toSet());
+        Map<Long, List<LargeGroupScore>> largeScoresByStudent = loadLargeGroupScoresBatch(allStudentIds, year);
+        List<Student> allStudents = studentsByGroup.values().stream()
+                .flatMap(List::stream)
+                .collect(Collectors.toList());
+        Map<Long, List<TeacherScoreRecord>> recordsByStudent = queries.loadTeacherScoreMap(allStudents, year);
+        Map<Long, List<DefenseGroupTeacher>> groupTeachersByGroup = loadGroupTeachersByGroup(groups);
+        Map<Long, Integer> deptTeacherCountMap = buildDepartmentTeacherCountMap(groups, groupTeachersByGroup);
 
         for (DefenseGroup group : groups) {
-            List<Student> students = filterStudentsByYear(studentMapper.findByDefenseGroupId(group.getId()), year);
+            List<Student> students = studentsByGroup.getOrDefault(group.getId(), Collections.emptyList());
             if (students.isEmpty()) {
                 continue;
             }
 
-            List<DefenseGroupTeacher> groupTeachers = defenseGroupTeacherMapper.findByGroupId(group.getId());
+            List<DefenseGroupTeacher> groupTeachers = groupTeachersByGroup.getOrDefault(
+                    group.getId(), Collections.emptyList());
             int groupTeacherCount = groupTeachers != null ? groupTeachers.size() : 0;
-            Map<Long, List<TeacherScoreRecord>> recordsByStudent = loadTeacherScoreMap(students, year);
 
-            Student topStudent = null;
-            double topAvgScore = -1;
-            for (Student student : students) {
-                List<TeacherScoreRecord> records = recordsByStudent.getOrDefault(student.getId(), Collections.emptyList());
-                if (records.isEmpty() || records.size() < groupTeacherCount) {
-                    continue;
-                }
-                Double avgScore = averageTotalScore(records);
-                if (avgScore != null && avgScore > topAvgScore) {
-                    topAvgScore = avgScore;
-                    topStudent = student;
-                }
-            }
-
+            Student topStudent = findTopStudent(students, recordsByStudent, groupTeacherCount);
             if (topStudent == null) {
                 continue;
             }
 
-            Map<String, Object> candidate = new HashMap<>();
-            candidate.put("groupId", group.getId());
-            candidate.put("groupName", group.getName());
-            candidate.put("departmentId", group.getDepartmentId());
-            candidate.put("studentId", topStudent.getId());
-            candidate.put("studentNo", topStudent.getStudentNo());
-            candidate.put("studentName", topStudent.getName());
-            candidate.put("defenseType", topStudent.getDefenseType());
-            candidate.put("title", topStudent.getTitle());
-            candidate.put("groupAvgScore", round(topAvgScore, 1));
-
-            List<LargeGroupScore> largeScores = largeGroupScoreMapper.findByStudentIdAndYear(topStudent.getId(), year);
-            candidate.put("largeGroupScoredCount", largeScores != null ? largeScores.size() : 0);
-            candidate.put("totalTeachersCount", deptTeacherCountMap.getOrDefault(group.getDepartmentId(), 0));
-
-            Double largeGroupAvgScore = null;
-            if (largeScores != null && !largeScores.isEmpty()) {
-                double largeAvg = largeScores.stream()
-                        .filter(score -> score.getScore() != null)
-                        .mapToInt(LargeGroupScore::getScore)
-                        .average()
-                        .orElse(0.0);
-                largeGroupAvgScore = round(largeAvg, 1);
+            Double topAvgScore = averageTotalScore(recordsByStudent.get(topStudent.getId()));
+            if (topAvgScore == null) {
+                continue;
             }
-            candidate.put("largeGroupAvgScore", largeGroupAvgScore);
-            candidate.put("adjustmentFactor",
-                    largeGroupAvgScore != null && topAvgScore > 0 ? round(largeGroupAvgScore / topAvgScore, 3) : null);
 
-            Integer myLargeGroupScore = null;
-            if (currentTeacherId != null && largeScores != null) {
-                for (LargeGroupScore largeScore : largeScores) {
-                    if (largeScore.getTeacherId() != null && largeScore.getTeacherId().equals(currentTeacherId)) {
-                        myLargeGroupScore = largeScore.getScore();
-                        break;
-                    }
-                }
-            }
-            candidate.put("myLargeGroupScore", myLargeGroupScore);
+            List<LargeGroupScore> topStudentLargeScores = largeScoresByStudent.getOrDefault(topStudent.getId(), Collections.emptyList());
+            Map<String, Object> candidate = buildCandidateInfo(group, topStudent, topAvgScore, year,
+                    currentTeacherId, deptTeacherCountMap, topStudentLargeScores);
             candidates.add(candidate);
         }
 
@@ -410,19 +287,23 @@ final class ScoreGroupSupport {
                 .average()
                 .orElse(0.0);
 
-        List<Student> students = filterStudentsByYear(studentMapper.findByDefenseGroupId(topStudent.getDefenseGroupId()), year);
+        List<Student> students = queries.filterStudentsByYear(
+                studentMapper.findByDefenseGroupId(topStudent.getDefenseGroupId()), year);
         if (students.isEmpty()) {
             return;
         }
 
-        Map<Long, List<TeacherScoreRecord>> recordsByStudent = loadTeacherScoreMap(students, year);
+        Map<Long, List<TeacherScoreRecord>> recordsByStudent = queries.loadTeacherScoreMap(students, year);
         Double topStudentGroupAvgScore = averageTotalScore(recordsByStudent.get(topStudentId));
         if (topStudentGroupAvgScore == null || topStudentGroupAvgScore <= 0) {
             return;
         }
 
-        double adjustmentFactor = round(largeGroupAvgScore / topStudentGroupAvgScore, 3);
-        Map<Long, StudentFinalScore> finalScoresByStudent = loadFinalScores(students, year);
+        Double adjustmentFactor = ScoreMathHelper.computeAdjustmentFactor(largeGroupAvgScore, topStudentGroupAvgScore);
+        if (adjustmentFactor == null) {
+            return;
+        }
+        Map<Long, StudentFinalScore> finalScoresByStudent = queries.loadFinalScores(students, year);
 
         for (Student student : students) {
             Double studentGroupAvgScore = averageTotalScore(recordsByStudent.get(student.getId()));
@@ -430,15 +311,15 @@ final class ScoreGroupSupport {
                 continue;
             }
 
-            StudentFinalScore finalScore = ensureFinalScore(finalScoresByStudent, student.getId(), year);
-            finalScore.setGroupAvgScore((int) Math.round(studentGroupAvgScore));
+            StudentFinalScore finalScore = queries.ensureFinalScore(finalScoresByStudent, student.getId(), year);
+            finalScore.setGroupAvgScore(roundToIntegerScore(studentGroupAvgScore));
             finalScore.setAdjustmentFactor(adjustmentFactor);
 
-            double finalDefenseScore = round(studentGroupAvgScore * adjustmentFactor, 1);
+            double finalDefenseScore = computeFinalDefenseScore(studentGroupAvgScore, adjustmentFactor);
             finalScore.setFinalDefenseScore(finalDefenseScore);
 
             if (student.getId().equals(topStudentId)) {
-                finalScore.setLargeGroupScore((int) Math.round(largeGroupAvgScore));
+                finalScore.setLargeGroupScore(roundToIntegerScore(largeGroupAvgScore));
             }
 
             refreshTotalGrade(finalScore, finalDefenseScore);
@@ -452,128 +333,267 @@ final class ScoreGroupSupport {
         }
         List<TeacherScoreRecord> records = teacherScoreRecordMapper.findByStudentIdAndYear(studentId, year);
         Double avgScore = averageTotalScore(records);
-        return avgScore == null ? null : round(avgScore, 1);
+        return avgScore == null ? null : roundDefault(avgScore);
     }
 
-    private Map<Long, List<TeacherScoreRecord>> loadTeacherScoreMap(List<Student> students, Integer year) {
-        Map<Long, List<TeacherScoreRecord>> recordsByStudent = new HashMap<>();
-        if (students == null || students.isEmpty() || year == null) {
-            return recordsByStudent;
-        }
+    // ─── Private helpers ───────────────────────────────────────────────────────
 
-        List<Long> studentIds = students.stream()
-                .map(Student::getId)
-                .collect(Collectors.toList());
-        List<TeacherScoreRecord> records = teacherScoreRecordMapper.findByStudentIdsAndYear(studentIds, year);
-        if (records == null) {
-            return recordsByStudent;
+    private Double computeAdjustmentFactor(Student topStudent, double topAvgScore, Integer year) {
+        if (topStudent == null || topAvgScore <= 0) {
+            return null;
         }
-
-        for (TeacherScoreRecord record : records) {
-            if (record.getStudentId() != null) {
-                recordsByStudent.computeIfAbsent(record.getStudentId(), key -> new ArrayList<>()).add(record);
-            }
+        List<LargeGroupScore> largeScores = largeGroupScoreMapper.findByStudentIdAndYear(topStudent.getId(), year);
+        if (largeScores == null || largeScores.isEmpty()) {
+            return null;
         }
-
-        for (Long studentId : studentIds) {
-            if (!recordsByStudent.containsKey(studentId)) {
-                List<TeacherScoreRecord> studentRecords = teacherScoreRecordMapper.findByStudentIdAndYear(studentId, year);
-                if (studentRecords != null && !studentRecords.isEmpty()) {
-                    recordsByStudent.put(studentId, studentRecords);
-                }
-            }
-        }
-        return recordsByStudent;
+        double largeGroupAvgScore = largeScores.stream()
+                .filter(score -> score.getScore() != null)
+                .mapToInt(LargeGroupScore::getScore)
+                .average()
+                .orElse(0.0);
+        return ScoreMathHelper.computeAdjustmentFactor(largeGroupAvgScore, topAvgScore);
     }
 
-    private Map<Long, StudentFinalScore> loadFinalScores(List<Student> students, Integer year) {
-        Map<Long, StudentFinalScore> finalScoresByStudent = new HashMap<>();
-        if (students == null || students.isEmpty() || year == null) {
-            return finalScoresByStudent;
-        }
+    private Map<String, Object> buildStudentInfo(Student student, List<TeacherScoreRecord> records,
+                                                   int totalTeachers, Double groupAdjustmentFactor,
+                                                   Long teacherId) {
+        Map<String, Object> studentInfo = new HashMap<>();
+        studentInfo.put("id", student.getId());
+        studentInfo.put("studentNo", student.getStudentNo());
+        studentInfo.put("name", student.getName());
+        studentInfo.put("classInfo", student.getClassInfo());
+        studentInfo.put("departmentName", resolveDepartmentName(student));
+        studentInfo.put("defenseType", student.getDefenseType());
+        studentInfo.put("title", student.getTitle());
+        studentInfo.put("defenseYear", student.getDefenseYear());
+        studentInfo.put("scoredTeachersCount", records.size());
+        studentInfo.put("totalTeachersCount", totalTeachers);
+        studentInfo.put("teacherScores", buildTeacherScoreEntries(records));
 
-        List<Long> studentIds = students.stream()
-                .map(Student::getId)
-                .collect(Collectors.toList());
-        List<StudentFinalScore> finalScores = studentFinalScoreMapper.findByStudentIdsAndYear(studentIds, year);
-        if (finalScores == null) {
-            return finalScoresByStudent;
-        }
+        TeacherScoreRecord myScore = findTeacherScore(records, teacherId);
+        studentInfo.put("hasScored", myScore != null);
+        studentInfo.put("myScore", myScore);
+        applyProgressFields(studentInfo, records, totalTeachers, groupAdjustmentFactor);
 
-        for (StudentFinalScore finalScore : finalScores) {
-            if (finalScore.getStudentId() != null) {
-                finalScoresByStudent.put(finalScore.getStudentId(), finalScore);
-            }
-        }
-
-        for (Long studentId : studentIds) {
-            if (!finalScoresByStudent.containsKey(studentId)) {
-                StudentFinalScore finalScore = studentFinalScoreMapper.findByStudentIdAndYear(studentId, year);
-                if (finalScore != null) {
-                    finalScoresByStudent.put(studentId, finalScore);
-                }
-            }
-        }
-        return finalScoresByStudent;
+        return studentInfo;
     }
 
-    private StudentFinalScore ensureFinalScore(Map<Long, StudentFinalScore> finalScoresByStudent,
-                                               Long studentId,
-                                               Integer year) {
-        StudentFinalScore finalScore = finalScoresByStudent.get(studentId);
+    private Map<String, Object> buildSuperAdminStudentInfo(Student student, List<TeacherScoreRecord> records,
+                                                            int totalTeachers, StudentFinalScore finalScore) {
+        Map<String, Object> studentInfo = new HashMap<>();
+        studentInfo.put("id", student.getId());
+        studentInfo.put("studentNo", student.getStudentNo());
+        studentInfo.put("name", student.getName());
+        studentInfo.put("departmentName", resolveDepartmentName(student));
+        studentInfo.put("defenseType", student.getDefenseType());
+        studentInfo.put("title", student.getTitle());
+        studentInfo.put("scoredTeachersCount", records.size());
+        studentInfo.put("totalTeachersCount", totalTeachers);
+        studentInfo.put("hasScored", !records.isEmpty());
+        studentInfo.put("teacherScores", buildTeacherScoreEntries(records));
+        applyProgressFields(studentInfo, records, totalTeachers, null);
+
         if (finalScore != null) {
-            return finalScore;
+            studentInfo.put("adjustmentFactor", finalScore.getAdjustmentFactor());
+            studentInfo.put("finalDefenseScore", finalScore.getFinalDefenseScore());
+        } else {
+            studentInfo.put("adjustmentFactor", null);
+            studentInfo.put("finalDefenseScore", null);
         }
 
-        finalScore = new StudentFinalScore();
-        finalScore.setStudentId(studentId);
-        finalScore.setYear(year);
-        studentFinalScoreMapper.insert(finalScore);
-        finalScoresByStudent.put(studentId, finalScore);
-        return finalScore;
+        return studentInfo;
     }
 
-    private List<Student> filterStudentsByYear(List<Student> students, Integer year) {
-        if (students == null || students.isEmpty()) {
-            return new ArrayList<>();
+    private void applyProgressFields(Map<String, Object> studentInfo,
+                                     List<TeacherScoreRecord> records,
+                                     int totalTeachers,
+                                     Double groupAdjustmentFactor) {
+        Double avgScore = hasAllTeacherScores(records, totalTeachers)
+                ? averageTotalScore(records)
+                : null;
+        studentInfo.put("avgScore", avgScore == null ? null : roundDefault(avgScore));
+        studentInfo.put("allScored", avgScore != null);
+        if (groupAdjustmentFactor != null) {
+            studentInfo.put("adjustmentFactor", groupAdjustmentFactor);
+            studentInfo.put("finalDefenseScore", avgScore != null
+                    ? computeFinalDefenseScore(avgScore, groupAdjustmentFactor)
+                    : null);
         }
-        if (year == null) {
-            return new ArrayList<>(students);
-        }
-        return students.stream()
-                .filter(student -> student.getDefenseYear() != null && student.getDefenseYear().equals(year))
-                .collect(Collectors.toList());
     }
 
-    private String resolveDepartmentName(Student student) {
-        if (student.getDepartment() != null && student.getDepartment().getName() != null
-                && !student.getDepartment().getName().isEmpty()) {
-            return student.getDepartment().getName();
+    private boolean hasAllTeacherScores(List<TeacherScoreRecord> records, int totalTeachers) {
+        return totalTeachers > 0 && records.size() >= totalTeachers;
+    }
+
+    private TeacherScoreRecord findTeacherScore(List<TeacherScoreRecord> records, Long teacherId) {
+        if (teacherId == null || records == null || records.isEmpty()) {
+            return null;
+        }
+        for (TeacherScoreRecord record : records) {
+            if (record.getTeacherId() != null && record.getTeacherId().equals(teacherId)) {
+                return record;
+            }
         }
         return null;
     }
 
-    private Double averageTotalScore(List<TeacherScoreRecord> records) {
+    private List<Map<String, Object>> buildTeacherScoreEntries(List<TeacherScoreRecord> records) {
         if (records == null || records.isEmpty()) {
-            return null;
+            return Collections.emptyList();
         }
-        DoubleSummaryStatistics stats = records.stream()
-                .filter(record -> record.getTotalScore() != null)
-                .mapToDouble(TeacherScoreRecord::getTotalScore)
-                .summaryStatistics();
-        return stats.getCount() == 0 ? null : stats.getAverage();
+        List<Map<String, Object>> teacherScores = new ArrayList<>();
+        for (TeacherScoreRecord record : records) {
+            Map<String, Object> scoreInfo = new HashMap<>();
+            scoreInfo.put("teacherId", record.getTeacherId());
+            scoreInfo.put("teacherName",
+                    record.getTeacher() != null ? record.getTeacher().getName() : null);
+            scoreInfo.put("teacherNo",
+                    record.getTeacher() != null ? record.getTeacher().getTeacherNo() : null);
+            scoreInfo.put("item1Score", record.getItem1Score());
+            scoreInfo.put("item2Score", record.getItem2Score());
+            scoreInfo.put("item3Score", record.getItem3Score());
+            scoreInfo.put("item4Score", record.getItem4Score());
+            scoreInfo.put("item5Score", record.getItem5Score());
+            scoreInfo.put("item6Score", record.getItem6Score());
+            scoreInfo.put("totalScore", record.getTotalScore());
+            scoreInfo.put("submitTime", record.getSubmitTime());
+            teacherScores.add(scoreInfo);
+        }
+        return teacherScores;
     }
 
-    private void refreshTotalGrade(StudentFinalScore finalScore, double finalDefenseScore) {
-        if (finalScore.getAdvisorScore() != null && finalScore.getReviewerScore() != null) {
-            double totalGrade = finalScore.getAdvisorScore() * 0.3
-                    + finalScore.getReviewerScore() * 0.3
-                    + finalDefenseScore * 0.4;
-            finalScore.setTotalGrade(round(totalGrade, 1));
+    private Map<String, Object> buildCandidateInfo(DefenseGroup group, Student topStudent, double topAvgScore,
+                                                   Integer year, Long currentTeacherId,
+                                                   Map<Long, Integer> deptTeacherCountMap,
+                                                   List<LargeGroupScore> topStudentLargeScores) {
+        Map<String, Object> candidate = new HashMap<>();
+        candidate.put("groupId", group.getId());
+        candidate.put("groupName", group.getName());
+        candidate.put("departmentId", group.getDepartmentId());
+        candidate.put("studentId", topStudent.getId());
+        candidate.put("studentNo", topStudent.getStudentNo());
+        candidate.put("studentName", topStudent.getName());
+        candidate.put("defenseType", topStudent.getDefenseType());
+        candidate.put("title", topStudent.getTitle());
+        candidate.put("groupAvgScore", roundDefault(topAvgScore));
+
+        candidate.put("largeGroupScoredCount", topStudentLargeScores != null ? topStudentLargeScores.size() : 0);
+        candidate.put("totalTeachersCount", deptTeacherCountMap.getOrDefault(group.getDepartmentId(), 0));
+
+        Double largeGroupAvgScore = null;
+        Double rawLargeGroupAvgScore = null;
+        if (topStudentLargeScores != null && !topStudentLargeScores.isEmpty()) {
+            double largeAvg = topStudentLargeScores.stream()
+                    .filter(score -> score.getScore() != null)
+                    .mapToInt(LargeGroupScore::getScore)
+                    .average()
+                    .orElse(0.0);
+            rawLargeGroupAvgScore = largeAvg;
+            largeGroupAvgScore = roundDefault(largeAvg);
         }
+        candidate.put("largeGroupAvgScore", largeGroupAvgScore);
+        candidate.put("adjustmentFactor", ScoreMathHelper.computeAdjustmentFactor(rawLargeGroupAvgScore, topAvgScore));
+
+        Integer myLargeGroupScore = null;
+        if (currentTeacherId != null && topStudentLargeScores != null) {
+            for (LargeGroupScore largeScore : topStudentLargeScores) {
+                if (largeScore.getTeacherId() != null && largeScore.getTeacherId().equals(currentTeacherId)) {
+                    myLargeGroupScore = largeScore.getScore();
+                    break;
+                }
+            }
+        }
+        candidate.put("myLargeGroupScore", myLargeGroupScore);
+
+        return candidate;
     }
 
-    private double round(double value, int scale) {
-        return BigDecimal.valueOf(value).setScale(scale, RoundingMode.HALF_UP).doubleValue();
+    private Map<Long, List<DefenseGroupTeacher>> loadGroupTeachersByGroup(List<DefenseGroup> groups) {
+        Map<Long, List<DefenseGroupTeacher>> teachersByGroup = new HashMap<>();
+        List<Long> groupIds = groups.stream()
+                .map(DefenseGroup::getId)
+                .collect(Collectors.toList());
+        List<DefenseGroupTeacher> relevantGroupTeachers = defenseGroupTeacherMapper.findByGroupIds(groupIds);
+        if (relevantGroupTeachers == null) {
+            return teachersByGroup;
+        }
+        for (DefenseGroupTeacher teacher : relevantGroupTeachers) {
+            if (teacher.getGroupId() != null) {
+                teachersByGroup.computeIfAbsent(teacher.getGroupId(), key -> new ArrayList<>()).add(teacher);
+            }
+        }
+        return teachersByGroup;
+    }
+
+    private Map<Long, Integer> buildDepartmentTeacherCountMap(
+            List<DefenseGroup> groups,
+            Map<Long, List<DefenseGroupTeacher>> groupTeachersByGroup) {
+        Map<Long, Integer> deptTeacherCountMap = new HashMap<>();
+        if (groupTeachersByGroup == null || groupTeachersByGroup.isEmpty()) {
+            return deptTeacherCountMap;
+        }
+
+        Map<Long, Long> groupDeptMap = new HashMap<>();
+        for (DefenseGroup group : groups) {
+            if (group.getDepartmentId() != null) {
+                groupDeptMap.put(group.getId(), group.getDepartmentId());
+            }
+        }
+
+        Map<Long, Set<Long>> deptTeachersSet = new HashMap<>();
+        for (Map.Entry<Long, List<DefenseGroupTeacher>> entry : groupTeachersByGroup.entrySet()) {
+            Long departmentId = groupDeptMap.get(entry.getKey());
+            if (departmentId == null) {
+                continue;
+            }
+            for (DefenseGroupTeacher teacher : entry.getValue()) {
+                if (teacher.getTeacherId() != null) {
+                    deptTeachersSet.computeIfAbsent(departmentId, key -> new HashSet<>()).add(teacher.getTeacherId());
+                }
+            }
+        }
+
+        for (Map.Entry<Long, Set<Long>> entry : deptTeachersSet.entrySet()) {
+            deptTeacherCountMap.put(entry.getKey(), entry.getValue().size());
+        }
+        return deptTeacherCountMap;
+    }
+
+    private Student findTopStudent(List<Student> students, Map<Long, List<TeacherScoreRecord>> recordsByStudent,
+                                   int groupTeacherCount) {
+        Student topStudent = null;
+        double topAvgScore = -1;
+        for (Student student : students) {
+            List<TeacherScoreRecord> records = recordsByStudent.getOrDefault(student.getId(), Collections.emptyList());
+            if (records.isEmpty() || records.size() < groupTeacherCount) {
+                continue;
+            }
+            Double avgScore = averageTotalScore(records);
+            if (avgScore != null && avgScore > topAvgScore) {
+                topAvgScore = avgScore;
+                topStudent = student;
+            }
+        }
+        return topStudent;
+    }
+
+    /**
+     * 批量加载所有候选学生的的大组答辩成绩。
+     */
+    private Map<Long, List<LargeGroupScore>> loadLargeGroupScoresBatch(Set<Long> studentIds, Integer year) {
+        Map<Long, List<LargeGroupScore>> scoresByStudent = new HashMap<>();
+        if (studentIds == null || studentIds.isEmpty() || year == null) {
+            return scoresByStudent;
+        }
+        List<Long> ids = new ArrayList<>(studentIds);
+        List<LargeGroupScore> allScores = largeGroupScoreMapper.findByStudentIdsAndYear(ids, year);
+        if (allScores != null) {
+            for (LargeGroupScore score : allScores) {
+                if (score.getStudentId() != null) {
+                    scoresByStudent.computeIfAbsent(score.getStudentId(), key -> new ArrayList<>()).add(score);
+                }
+            }
+        }
+        return scoresByStudent;
     }
 }

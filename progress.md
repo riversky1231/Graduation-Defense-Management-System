@@ -1,28 +1,17 @@
-# Progress
+# Progress Log
 
-- 2026-03-29: 读取 `planning-with-files` 技能说明。
-- 2026-03-29: 完成工作区状态检查，发现存在大量已有修改和一个未跟踪的 `AdminUserController`。
-- 2026-03-29: 开始评估低风险拆分切口，避免继续扩散到 `StudentController` / `ExportController`。
-- 2026-03-29: 修复 `AdminUserController` 的导入、路由和用户导入逻辑中的明显问题，并保留旧 URL 兼容。
-- 2026-03-29: 从 `AdminController` 删除用户管理、用户导入和用户模板下载端点。
-- 2026-03-29: 运行 `mvn -q -DskipTests compile` 和 `mvn test -q`，均通过。
-- 2026-03-29: 新增 `StudentImportController`，迁出学生 Excel 导入、模板下载及相关私有工具方法。
-- 2026-03-29: 从 `StudentController` 删除已迁出的导入相关端点和工具方法。
-- 2026-03-29: 再次运行 `mvn -q -DskipTests compile` 和 `mvn test -q`，均通过。
-- 2026-03-29: 新增 `LeaderExportController` 和 `TeacherExportController`，迁出组长与教师导出端点。
-- 2026-03-29: 从 `ExportController` 删除已迁出的角色端点，并开放包级文档构建方法供新控制器复用。
-- 2026-03-29: 再次运行 `mvn -q -DskipTests compile` 和 `mvn test -q`，均通过。
-- 2026-03-29: 新增 `GroupExportController`，迁出小组统分表与小组成绩 ZIP 导出端点。
-- 2026-03-29: 从 `ExportController` 删除小组导出实现，并开放包级模板/签名辅助方法供新控制器复用。
-- 2026-03-29: 本轮拆分后再次运行 `mvn -q -DskipTests compile` 与 `mvn test -q`，均通过。
-- 2026-03-29: 新增 `TeacherStudentController`，迁出 `StudentController` 中全部 `/teacher/...` 教师侧学生与评分端点。
-- 2026-03-29: 将 `StudentController` 收敛为院系管理、组长评分查看和分组管理职责，行数降至 573。
-- 2026-03-29: 本轮拆分后再次运行 `mvn -q -DskipTests compile` 与 `mvn test -q`，均通过。
-- 2026-03-29: 为 `TeacherScoreRecordMapper` 增加 `findByStudentIdsAndYear(...)` 批量查询，并在 MyBatis XML 中补齐对应 SQL。
-- 2026-03-29: 新增 `ScoreGroupSupport`，迁出 `ScoreServiceImpl` 中小组统分、调节系数、小组学生聚合和大组候选人相关逻辑。
-- 2026-03-29: 为兼容旧测试桩，在 `ScoreGroupSupport` 中保留“批量查询主路径 + 缺失数据单条回退”策略。
-- 2026-03-29: 先跑 `ScoreServiceImplAdjustmentTest` / `ScoreServiceImplTest` 定点验证，再执行 `mvn test -q`，均通过。
-- 2026-03-29: 新增 `LargeGroupScoreController`，迁出 `ScoreController` 中全部 `/defense/score/largegroup/...` 端点与所需辅助方法。
-- 2026-03-29: `ScoreController` 行数降至 369，`LargeGroupScoreController` 为 245，迁移后再次通过 `mvn -q -DskipTests compile` 与 `mvn test -q`。
-- 2026-03-29: 新增 `GroupAssignmentController`，迁出 `GroupTeacherController` 中批量教师分配、未分配教师查询、最大人数配置与随机分配端点。
-- 2026-03-29: `GroupTeacherController` 行数降至 133，`GroupAssignmentController` 为 387，迁移后再次通过 `mvn -q -DskipTests compile` 与 `mvn test -q`。
+## 2026-04-07
+
+- Verified the user-provided review report against the current `feature/test-augment` worktree.
+- Ran targeted tests successfully:
+  - `ScoreControllersTest`
+  - `LargeGroupScoreControllersTest`
+  - `ScoreServiceImplAutoSplitTest`
+  - `ScoreServiceImplAdjustmentTest`
+- Started implementation plan for full remediation of validated issues.
+- Hardened `score` controller endpoints to use session-bound authorization and safe error responses.
+- Unified `score` controller responses to `ApiResponse` and updated affected frontend fetch handlers in `index.html`.
+- Removed `ScoreGroupQueries` fallback N+1 logic and switched `ScoreGroupSupport` to a Spring-managed component.
+- Added `findById` for `LargeGroupScoreMapper` and batched `DefenseGroupTeacherMapper#findByGroupIds`.
+- Added `ScoreMathHelperTest` and `ScoreServiceImplLargeGroupScoreTest`.
+- Passed full verification with `mvn test`.

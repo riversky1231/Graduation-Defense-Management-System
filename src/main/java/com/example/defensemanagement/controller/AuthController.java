@@ -4,6 +4,9 @@ import com.example.defensemanagement.common.ApiResponse;
 import com.example.defensemanagement.entity.Teacher;
 import com.example.defensemanagement.entity.User;
 import com.example.defensemanagement.service.AuthService;
+import com.example.defensemanagement.service.impl.RedisLoginFailureService;
+import com.example.defensemanagement.util.ClientIpResolver;
+import com.example.defensemanagement.util.PasswordSecurityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,10 +21,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
-import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Tag(name = "认证", description = "登录、登出、修改密码")
 @Controller
@@ -31,55 +32,35 @@ public class AuthController {
     private static final Set<String> ALLOWED_ROLES = Set.of(
             "SUPER_ADMIN", "DEPT_ADMIN", "DEFENSE_LEADER", "TEACHER", "STUDENT");
 
-    /** 登录失败限流：最大失败次数 */
-    private static final int MAX_FAILURES = 5;
-    /** 锁定时长（毫秒）：15分钟 */
-    private static final long LOCK_DURATION_MS = 15 * 60 * 1000L;
-
-    /** key=IP, value=[失败次数, 首次失败时间戳] */
-    private final ConcurrentHashMap<String, long[]> loginFailures = new ConcurrentHashMap<>();
-
     @Autowired
     private AuthService authService;
 
-    private String getClientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            return xff.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
-    }
+    @Autowired
+    private RedisLoginFailureService loginFailureService;
 
-    private boolean isLocked(String ip) {
-        long[] record = loginFailures.get(ip);
-        if (record == null) return false;
-        long failures = record[0];
-        long firstFailTime = record[1];
-        if (failures >= MAX_FAILURES) {
-            if (Instant.now().toEpochMilli() - firstFailTime < LOCK_DURATION_MS) {
-                return true;
-            }
-            // 锁定已过期，清除记录
-            loginFailures.remove(ip);
-        }
-        return false;
-    }
-
-    private void recordFailure(String ip) {
-        loginFailures.compute(ip, (k, v) -> {
-            if (v == null) return new long[]{1, Instant.now().toEpochMilli()};
-            v[0]++;
-            return v;
-        });
-    }
-
-    private void clearFailure(String ip) {
-        loginFailures.remove(ip);
-    }
+    @Autowired
+    private ClientIpResolver clientIpResolver;
 
     @GetMapping("/login")
     public String loginPage() {
         return "login";
+    }
+
+    @GetMapping("/force-password-change")
+    public String forcePasswordChangePage(HttpSession session, Model model) {
+        if (!Boolean.TRUE.equals(session.getAttribute(PasswordSecurityUtils.FORCE_PASSWORD_CHANGE_SESSION_KEY))) {
+            return "redirect:/";
+        }
+
+        User currentUser = (User) session.getAttribute("currentUser");
+        Teacher currentTeacher = (Teacher) session.getAttribute("currentTeacher");
+        if (currentUser == null && currentTeacher == null) {
+            return "redirect:/login";
+        }
+
+        String displayName = currentUser != null ? currentUser.getRealName() : currentTeacher.getName();
+        model.addAttribute("displayName", displayName);
+        return "force-password-change";
     }
 
     @PostMapping("/login")
@@ -93,15 +74,19 @@ public class AuthController {
         String normalizedUsername = username == null ? "" : username.trim();
         String normalizedRole = role == null ? "" : role.trim().toUpperCase();
         String normalizedCaptcha = captcha == null ? "" : captcha.trim().toLowerCase();
-        String clientIp = getClientIp(request);
+        String clientIp = clientIpResolver.resolveClientIp(request);
 
         if (normalizedUsername.isEmpty() || password == null || password.isBlank() || !ALLOWED_ROLES.contains(normalizedRole)) {
             model.addAttribute("error", "用户名、密码或角色不合法。");
             return "login";
         }
+        if (!PasswordSecurityUtils.isPasswordLengthAllowed(password)) {
+            model.addAttribute("error", "密码长度不合法。");
+            return "login";
+        }
 
-        // 检查 IP 是否被锁定
-        if (isLocked(clientIp)) {
+        // Check if IP is locked
+        if (loginFailureService.isLocked(clientIp)) {
             log.warn("Login blocked for locked IP: {}", clientIp);
             model.addAttribute("error", "登录失败次数过多，请15分钟后再试。");
             return "login";
@@ -120,25 +105,20 @@ public class AuthController {
         if ("TEACHER".equals(normalizedRole)) {
             Teacher teacher = authService.teacherLogin(normalizedUsername, password);
             if (teacher != null) {
-                clearFailure(clientIp);
-                session.setAttribute("currentTeacher", teacher);
-                session.setAttribute("userType", "TEACHER");
-                return "redirect:/?login=success";
+                loginFailureService.clearFailure(clientIp);
+                return completeTeacherLogin(session, teacher, password);
             }
         } else {
             User user = authService.login(normalizedUsername, password);
             if (user != null && user.getRole() != null && normalizedRole.equals(user.getRole().getName())) {
-                clearFailure(clientIp);
-                session.setAttribute("currentUser", user);
-                session.setAttribute("userType", "STUDENT".equals(normalizedRole) ? "STUDENT" : "USER");
-                return "redirect:/?login=success";
+                loginFailureService.clearFailure(clientIp);
+                return completeUserLogin(session, user, "STUDENT".equals(normalizedRole) ? "STUDENT" : "USER", password);
             }
         }
 
         // Login failed
-        recordFailure(clientIp);
-        long[] record = loginFailures.get(clientIp);
-        long remaining = record != null ? MAX_FAILURES - record[0] : 0;
+        loginFailureService.recordFailure(clientIp);
+        int remaining = loginFailureService.remainingAttempts(clientIp);
         log.warn("Login failed: username={}, ip={}, remaining attempts={}", normalizedUsername, clientIp, remaining);
         if (remaining <= 0) {
             model.addAttribute("error", "登录失败次数过多，账号已锁定15分钟。");
@@ -158,7 +138,12 @@ public class AuthController {
     @ResponseBody
     public ApiResponse<Map<String, String>> changePassword(@RequestParam String oldPassword,
                                                            @RequestParam String newPassword,
-                                                           HttpSession session) {
+                                                           HttpSession session,
+                                                           HttpServletRequest request) {
+        if (!isAjaxRequest(request)) {
+            return ApiResponse.error("非法请求");
+        }
+
         String userType = (String) session.getAttribute("userType");
         if (userType == null) {
             return ApiResponse.error("未登录");
@@ -167,11 +152,18 @@ public class AuthController {
         if (oldPassword == null || oldPassword.isBlank() || newPassword == null || newPassword.isBlank()) {
             return ApiResponse.error("密码不能为空");
         }
-        if (newPassword.length() < 8) {
-            return ApiResponse.error("新密码至少需要 8 位");
+        if (!PasswordSecurityUtils.isPasswordLengthAllowed(oldPassword)
+                || !PasswordSecurityUtils.isPasswordLengthAllowed(newPassword)) {
+            return ApiResponse.error("密码长度不能超过 " + PasswordSecurityUtils.MAX_PASSWORD_LENGTH + " 位");
         }
-        if (newPassword.equals(oldPassword)) {
+        if (!PasswordSecurityUtils.isNewPasswordLengthValid(newPassword)) {
+            return ApiResponse.error("新密码至少需要 " + PasswordSecurityUtils.MIN_PASSWORD_LENGTH + " 位");
+        }
+        if (PasswordSecurityUtils.constantTimeEquals(newPassword, oldPassword)) {
             return ApiResponse.error("新密码不能与旧密码相同");
+        }
+        if (isDefaultIdentifierPasswordForCurrentSession(session, newPassword)) {
+            return ApiResponse.error("新密码不能与账号相同");
         }
 
         if ("USER".equals(userType) || "STUDENT".equals(userType)) {
@@ -179,6 +171,7 @@ public class AuthController {
             if (currentUser != null) {
                 boolean result = authService.changeUserPassword(currentUser.getId(), oldPassword, newPassword);
                 if (result) {
+                    session.removeAttribute(PasswordSecurityUtils.FORCE_PASSWORD_CHANGE_SESSION_KEY);
                     return ApiResponse.success("密码修改成功", Map.of("userType", userType));
                 } else {
                     return ApiResponse.error("旧密码错误或用户不存在");
@@ -191,6 +184,7 @@ public class AuthController {
             if (currentTeacher != null) {
                 boolean result = authService.changeTeacherPassword(currentTeacher.getId(), oldPassword, newPassword);
                 if (result) {
+                    session.removeAttribute(PasswordSecurityUtils.FORCE_PASSWORD_CHANGE_SESSION_KEY);
                     return ApiResponse.success("密码修改成功", Map.of("userType", userType));
                 } else {
                     return ApiResponse.error("旧密码错误或教师不存在");
@@ -201,5 +195,53 @@ public class AuthController {
         }
 
         return ApiResponse.error("未知用户类型");
+    }
+
+    private String completeUserLogin(HttpSession session, User user, String userType, String rawPassword) {
+        session.setAttribute("currentUser", user);
+        session.removeAttribute("currentTeacher");
+        session.setAttribute("userType", userType);
+
+        if (shouldRequirePasswordChange(user.getPassword(), rawPassword, user.getUsername())) {
+            session.setAttribute(PasswordSecurityUtils.FORCE_PASSWORD_CHANGE_SESSION_KEY, Boolean.TRUE);
+            return "redirect:/force-password-change";
+        }
+
+        session.removeAttribute(PasswordSecurityUtils.FORCE_PASSWORD_CHANGE_SESSION_KEY);
+        return "redirect:/?login=success";
+    }
+
+    private String completeTeacherLogin(HttpSession session, Teacher teacher, String rawPassword) {
+        session.setAttribute("currentTeacher", teacher);
+        session.removeAttribute("currentUser");
+        session.setAttribute("userType", "TEACHER");
+
+        if (shouldRequirePasswordChange(teacher.getPassword(), rawPassword, teacher.getTeacherNo())) {
+            session.setAttribute(PasswordSecurityUtils.FORCE_PASSWORD_CHANGE_SESSION_KEY, Boolean.TRUE);
+            return "redirect:/force-password-change";
+        }
+
+        session.removeAttribute(PasswordSecurityUtils.FORCE_PASSWORD_CHANGE_SESSION_KEY);
+        return "redirect:/?login=success";
+    }
+
+    private boolean isAjaxRequest(HttpServletRequest request) {
+        return "XMLHttpRequest".equalsIgnoreCase(request.getHeader("X-Requested-With"));
+    }
+
+    private boolean shouldRequirePasswordChange(String storedPasswordHash, String rawPassword, String identifier) {
+        return PasswordSecurityUtils.isDefaultSeedPasswordHash(storedPasswordHash)
+                || PasswordSecurityUtils.isIdentifierDefaultPassword(rawPassword, identifier);
+    }
+
+    private boolean isDefaultIdentifierPasswordForCurrentSession(HttpSession session, String password) {
+        User currentUser = (User) session.getAttribute("currentUser");
+        if (currentUser != null && PasswordSecurityUtils.isIdentifierDefaultPassword(password, currentUser.getUsername())) {
+            return true;
+        }
+
+        Teacher currentTeacher = (Teacher) session.getAttribute("currentTeacher");
+        return currentTeacher != null
+                && PasswordSecurityUtils.isIdentifierDefaultPassword(password, currentTeacher.getTeacherNo());
     }
 }

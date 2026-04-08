@@ -9,6 +9,8 @@ import com.example.defensemanagement.mapper.DepartmentMapper;
 import com.example.defensemanagement.mapper.RoleMapper;
 import com.example.defensemanagement.mapper.TeacherMapper;
 import com.example.defensemanagement.service.UserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -20,6 +22,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
+
+    private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
 
     @Autowired
     private UserMapper userMapper;
@@ -183,11 +187,11 @@ public class UserServiceImpl implements UserService {
 
             // 处理密码：如果密码为空或只有空白字符，则不更新密码（设置为null，让UserSqlBuilder跳过）
             if (StringUtils.hasText(user.getPassword())) {
-                System.out.println("更新用户密码: userId=" + user.getId() + ", 密码长度=" + user.getPassword().length());
+                log.debug("更新用户密码: userId={}", user.getId());
                 user.setPassword(passwordEncoder.encode(user.getPassword()));
             } else {
                 // 如果密码为空，设置为null，这样UserSqlBuilder就不会更新密码字段
-                System.out.println("密码为空，不更新密码字段: userId=" + user.getId());
+                log.debug("密码为空，不更新密码字段: userId={}", user.getId());
                 user.setPassword(null);
             }
             userMapper.update(user);

@@ -80,6 +80,18 @@
         ORDER BY dgt.group_id, dgt.is_leader DESC
     </select>
 
+    <select id="findByGroupIds" resultMap="DefenseGroupTeacherMap">
+        SELECT dgt.*, 
+               t.id as t_id, t.teacher_no, t.name as t_name, t.department_id, t.title, t.email, t.phone, t.status
+        FROM defense_group_teacher dgt
+        LEFT JOIN teacher t ON dgt.teacher_id = t.id
+        WHERE dgt.group_id IN
+        <foreach collection="groupIds" item="groupId" open="(" separator="," close=")">
+            #{groupId}
+        </foreach>
+        ORDER BY dgt.group_id, dgt.is_leader DESC
+    </select>
+
 </mapper>
 
 

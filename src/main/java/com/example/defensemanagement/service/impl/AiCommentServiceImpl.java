@@ -414,7 +414,7 @@ public class AiCommentServiceImpl implements AiCommentService {
                                 }
                             } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
                                 // 忽略单个JSON解析错误，继续处理下一行
-                                System.err.println("解析SSE数据失败: " + jsonData + ", 错误: " + e.getMessage());
+                                log.warn("解析SSE数据失败: {}, 错误: {}", jsonData, e.getMessage());
                             }
                         }
                     }

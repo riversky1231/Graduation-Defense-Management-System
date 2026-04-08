@@ -13966,15 +13966,12 @@
 
         try {
           const response = await fetch("/defense/score/teacher/group/students");
-          if (!response.ok) throw new Error("HTTP错误: " + response.status);
-          const data = await response.json();
-          console.log("教师小组学生数据:", data);
-
-          // 检查是否有错误响应
-          if (data.error) {
-            tbody.innerHTML = `<tr><td colspan="9" class="text-center text-warning">${data.error}</td></tr>`;
-            return;
+          const result = await parseApiResponse(response);
+          if (!result.success) {
+            throw new Error(result.message || "加载失败");
           }
+          const data = result.data || {};
+          console.log("教师小组学生数据:", data);
 
           // 显示教师和小组信息
           document.getElementById("ts-teacher-info").textContent =
@@ -14490,14 +14487,11 @@
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: params.toString(),
         });
-        if (!response.ok) {
-          throw new Error("分项生成请求失败: " + response.status);
+        const result = await parseApiResponse(response);
+        if (!result.success) {
+          throw new Error(result.message || "分项生成失败");
         }
-        const data = await response.json();
-        if (!data.success) {
-          throw new Error(data.error || "分项生成失败");
-        }
-        return data.items || {};
+        return result.data || {};
       }
 
       async function autoSplitTeacherScoreItems() {
@@ -14583,16 +14577,15 @@
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: params.toString(),
           });
-          const result = await response.text();
-
-          if (result === "success") {
+          const result = await parseApiResponse(response);
+          if (result.success) {
             showAlert("success", "打分成功！");
             bootstrap.Modal.getInstance(
               document.getElementById("teacherScoringModal"),
             ).hide();
             loadTeacherGroupStudents();
           } else {
-            showAlert("error", "打分失败：" + result);
+            showAlert("error", "打分失败：" + result.message);
           }
         } catch (error) {
           console.error(error);
@@ -14610,15 +14603,12 @@
 
         try {
           const response = await fetch("/defense/score/largegroup/candidates");
-          if (!response.ok) throw new Error("HTTP错误: " + response.status);
-          const data = await response.json();
-          console.log("大组答辩候选人数据:", data);
-
-          // 检查是否有错误响应
-          if (data.error) {
-            tbody.innerHTML = `<tr><td colspan="9" class="text-center text-warning">${data.error}</td></tr>`;
-            return;
+          const result = await parseApiResponse(response);
+          if (!result.success) {
+            throw new Error(result.message || "加载失败");
           }
+          const data = result.data || {};
+          console.log("大组答辩候选人数据:", data);
 
           // 显示信息
           document.getElementById("lg-teacher-info").textContent =
@@ -14753,15 +14743,11 @@
           const response = await fetch(
             `/defense/score/largegroup/student/${studentId}/scores/admin`,
           );
-          if (!response.ok) {
-            throw new Error("加载失败");
+          const result = await parseApiResponse(response);
+          if (!result.success) {
+            throw new Error(result.message || "加载失败");
           }
-          const data = await response.json();
-
-          if (data.error) {
-            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-warning">${data.error}</td></tr>`;
-            return;
-          }
+          const data = result.data || {};
 
           const scores = data.scores || [];
           if (scores.length === 0) {
@@ -14832,10 +14818,8 @@
               score: score,
             }),
           });
-
-          const result = await response.text();
-
-          if (response.ok && result === "success") {
+          const result = await parseApiResponse(response);
+          if (result.success) {
             showAlert("success", "保存成功");
             button.innerHTML = '<i class="bi bi-check"></i> 已保存';
             button.classList.remove("btn-outline-primary");
@@ -14843,10 +14827,7 @@
             // 刷新大组候选人列表
             loadLargeGroupCandidates();
           } else {
-            const errorMsg = result.startsWith("error:")
-              ? result.substring(6)
-              : result;
-            showAlert("error", "保存失败：" + errorMsg);
+            showAlert("error", "保存失败：" + result.message);
             button.disabled = false;
             button.innerHTML = '<i class="bi bi-check"></i> 保存';
           }
@@ -14902,16 +14883,15 @@
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: `studentId=${studentId}&score=${score}`,
           });
-          const result = await response.text();
-
-          if (result === "success") {
+          const result = await parseApiResponse(response);
+          if (result.success) {
             showAlert("success", "大组答辩打分成功！");
             bootstrap.Modal.getInstance(
               document.getElementById("largeGroupScoringModal"),
             ).hide();
             loadLargeGroupCandidates();
           } else {
-            showAlert("error", "打分失败：" + result);
+            showAlert("error", "打分失败：" + result.message);
           }
         } catch (error) {
           console.error(error);
@@ -15261,24 +15241,25 @@
       async function loadLeaderScoringDetail() {
         try {
           const resp = await fetch("/defense/score/teacher/group/students");
-          if (!resp.ok) {
-            showAlert("error", "加载失败");
+          const result = await parseApiResponse(resp);
+          if (!result.success) {
+            showAlert("error", result.message || "加载失败");
             return;
           }
-          const data = await resp.json();
-          if (data.error) {
-            showAlert("error", data.error);
-            return;
-          }
+          const data = result.data || {};
 
-          const groups = data.groups || [];
+          const groups = Array.isArray(data.groups) ? data.groups : [];
           const tbody = document.getElementById("leader-scoring-detail-tbody");
           tbody.innerHTML = "";
 
           let allStudents = [];
-          groups.forEach((g) => {
-            (g.students || []).forEach((s) => allStudents.push(s));
-          });
+          if (groups.length > 0) {
+            groups.forEach((g) => {
+              (g.students || []).forEach((s) => allStudents.push(s));
+            });
+          } else {
+            allStudents = Array.isArray(data.students) ? data.students : [];
+          }
 
           if (allStudents.length === 0) {
             tbody.innerHTML =
@@ -15287,8 +15268,12 @@
           }
 
           allStudents.forEach((s) => {
-            const scores = s.teacherScores || {};
-            const scoreEntries = Object.entries(scores);
+            const scoreEntries = Array.isArray(s.teacherScores)
+              ? s.teacherScores.map((score) => [
+                  score.teacherName || "未知教师",
+                  score.totalScore != null ? score.totalScore : "--",
+                ])
+              : Object.entries(s.teacherScores || {});
             const teacherScoresHtml =
               scoreEntries.length > 0
                 ? scoreEntries

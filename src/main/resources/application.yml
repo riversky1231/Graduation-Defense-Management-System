@@ -12,7 +12,7 @@ spring:
     store-type: none
   datasource:
     url: ${DB_URL:jdbc:mysql://localhost:3306/defense_management?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true}
-    # 开发环境默认值 root/root，生产环境通过环境变量注入（见 application-prod.yml）
+    # Local development defaults. Override with DB_USERNAME/DB_PASSWORD as needed.
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -51,6 +51,15 @@ logging:
     com.example.defensemanagement.mapper: DEBUG
 
 app:
+  security:
+    # Optional one-time bootstrap secret for seeded privileged accounts that still
+    # carry the shipped seed hash. Supports the legacy INITIAL_ADMIN_PASSWORD name
+    # so existing deployments do not break while moving to the broader scope.
+    initial-privileged-password: ${INITIAL_PRIVILEGED_PASSWORD:${INITIAL_ADMIN_PASSWORD:}}
+    # Comma-separated list of trusted reverse-proxy IPs (e.g. 10.0.0.1,192.168.1.1).
+    # X-Forwarded-For is only trusted when the immediate upstream is in this list.
+    # Leave empty to always fall back to getRemoteAddr() (safe default — no spoofing).
+    trusted-proxies: ${TRUSTED_PROXIES:}
   upload:
     signature-max-size-bytes: 2097152
     template-max-size-bytes: 10485760

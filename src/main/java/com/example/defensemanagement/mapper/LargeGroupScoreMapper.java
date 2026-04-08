@@ -28,9 +28,21 @@ public interface LargeGroupScoreMapper {
             @Param("year") Integer year);
 
     /**
+     * 批量：根据学生ID列表和年份查找所有打分记录
+     */
+    List<LargeGroupScore> findByStudentIdsAndYear(
+            @Param("studentIds") List<Long> studentIds,
+            @Param("year") Integer year);
+
+    /**
      * 根据年份查找所有大组答辩记录
      */
     List<LargeGroupScore> findByYear(@Param("year") Integer year);
+
+    /**
+     * 根据主键查找记录
+     */
+    LargeGroupScore findById(@Param("id") Long id);
 
     /**
      * 插入新记录

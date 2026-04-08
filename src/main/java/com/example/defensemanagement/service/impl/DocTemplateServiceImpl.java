@@ -3,6 +3,8 @@ package com.example.defensemanagement.service.impl;
 import com.example.defensemanagement.service.DocTemplateService;
 import org.apache.poi.util.Units;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
 import org.apache.poi.xwpf.usermodel.XWPFTable;
@@ -22,6 +24,8 @@ import java.util.Map;
 
 @Service
 public class DocTemplateServiceImpl implements DocTemplateService {
+
+    private static final Logger log = LoggerFactory.getLogger(DocTemplateServiceImpl.class);
 
     @Override
     public byte[] renderDoc(String templatePath, Map<String, String> placeholders, Map<String, byte[]> imageBytesMap) {
@@ -104,8 +108,8 @@ public class DocTemplateServiceImpl implements DocTemplateService {
     }
 
     private void insertImages(XWPFDocument document, Map<String, byte[]> imageBytesMap) {
-        System.out.println("[模板渲染] 开始插入图片，图片数量: " + imageBytesMap.size());
-        System.out.println("[模板渲染] 图片占位符: " + imageBytesMap.keySet());
+        log.debug("[模板渲染] 开始插入图片，图片数量: {}", imageBytesMap.size());
+        log.debug("[模板渲染] 图片占位符: {}", imageBytesMap.keySet());
 
         int totalInserted = 0;
         int paraCount = 0;
@@ -113,7 +117,7 @@ public class DocTemplateServiceImpl implements DocTemplateService {
             paraCount++;
             int inserted = replaceImageInParagraph(para, imageBytesMap);
             if (inserted > 0) {
-                System.out.println("[模板渲染] 在段落 " + paraCount + " 中插入了 " + inserted + " 张图片");
+                log.debug("[模板渲染] 在段落 {} 中插入了 {} 张图片", paraCount, inserted);
                 totalInserted += inserted;
             }
         }
@@ -134,26 +138,26 @@ public class DocTemplateServiceImpl implements DocTemplateService {
                         for (String key : imageBytesMap.keySet()) {
                             if (cellText != null && cellText.contains(key)) {
                                 hasPlaceholder = true;
-                                System.out.println("[模板渲染] 表格 " + tableCount + " 行 " + rowCount + " 单元格 " + cellCount
-                                        + " 包含占位符: " + key);
+                                log.debug("[模板渲染] 表格 {} 行 {} 单元格 {} 包含占位符: {}",
+                                        tableCount, rowCount, cellCount, key);
                                 break;
                             }
                         }
                         int inserted = replaceImageInParagraph(p, imageBytesMap);
                         if (inserted > 0) {
-                            System.out.println("[模板渲染] 在表格 " + tableCount + " 行 " + rowCount + " 单元格 " + cellCount
-                                    + " 中插入了 " + inserted + " 张图片");
+                            log.debug("[模板渲染] 在表格 {} 行 {} 单元格 {} 中插入了 {} 张图片",
+                                    tableCount, rowCount, cellCount, inserted);
                             totalInserted += inserted;
                         } else if (hasPlaceholder) {
-                            System.out.println("[模板渲染] 警告：表格 " + tableCount + " 行 " + rowCount + " 单元格 " + cellCount
-                                    + " 包含占位符但未插入图片（可能没有对应的图片数据）");
+                            log.warn("[模板渲染] 表格 {} 行 {} 单元格 {} 包含占位符但未插入图片（可能没有对应的图片数据）",
+                                    tableCount, rowCount, cellCount);
                         }
                     }
                 }
             }
         }
-        System.out.println(
-                "[模板渲染] 图片插入完成，共处理 " + paraCount + " 个段落和 " + tableCount + " 个表格，共插入 " + totalInserted + " 张图片");
+        log.debug("[模板渲染] 图片插入完成，共处理 {} 个段落和 {} 个表格，共插入 {} 张图片",
+                paraCount, tableCount, totalInserted);
     }
 
     private int replaceImageInParagraph(XWPFParagraph para, Map<String, byte[]> imageBytesMap) {
@@ -171,13 +175,13 @@ public class DocTemplateServiceImpl implements DocTemplateService {
                 int pos = text.indexOf(key);
                 while (pos >= 0) {
                     placeholders.add(new PlaceholderInfo(key, pos, bytes));
-                    System.out.println("[模板渲染] 在段落中找到占位符: " + key + " 位置: " + pos + " 文本内容: [" + text + "]");
+                    log.debug("[模板渲染] 在段落中找到占位符: {} 位置: {} 文本内容: [{}]", key, pos, text);
                     pos = text.indexOf(key, pos + key.length());
                 }
             } else {
                 // 即使没有图片，也要检查占位符是否存在（用于调试）
                 if (text.contains(key)) {
-                    System.out.println("[模板渲染] 警告：找到占位符 " + key + " 但没有对应的图片数据");
+                    log.warn("[模板渲染] 找到占位符 {} 但没有对应的图片数据", key);
                 }
             }
         }
@@ -187,7 +191,7 @@ public class DocTemplateServiceImpl implements DocTemplateService {
             return 0;
         }
 
-        System.out.println("[模板渲染] 准备替换 " + placeholders.size() + " 个图片占位符");
+        log.debug("[模板渲染] 准备替换 {} 个图片占位符", placeholders.size());
 
         // 按位置排序
         placeholders.sort(Comparator.comparingInt(p -> p.position));

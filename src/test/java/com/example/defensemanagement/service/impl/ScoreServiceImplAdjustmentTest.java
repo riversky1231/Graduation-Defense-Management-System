@@ -3,6 +3,9 @@ package com.example.defensemanagement.service.impl;
 import com.example.defensemanagement.entity.Student;
 import com.example.defensemanagement.entity.StudentFinalScore;
 import com.example.defensemanagement.entity.TeacherScoreRecord;
+import com.example.defensemanagement.mapper.DefenseGroupMapper;
+import com.example.defensemanagement.mapper.DefenseGroupTeacherMapper;
+import com.example.defensemanagement.mapper.LargeGroupScoreMapper;
 import com.example.defensemanagement.mapper.StudentFinalScoreMapper;
 import com.example.defensemanagement.mapper.StudentMapper;
 import com.example.defensemanagement.mapper.TeacherScoreRecordMapper;
@@ -18,9 +21,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ScoreServiceImplAdjustmentTest {
@@ -31,15 +33,31 @@ class ScoreServiceImplAdjustmentTest {
     private StudentFinalScoreMapper studentFinalScoreMapper;
     @Mock
     private StudentMapper studentMapper;
+    @Mock
+    private LargeGroupScoreMapper largeGroupScoreMapper;
+    @Mock
+    private DefenseGroupMapper defenseGroupMapper;
+    @Mock
+    private DefenseGroupTeacherMapper defenseGroupTeacherMapper;
 
     private ScoreServiceImpl service;
 
     @BeforeEach
     void setUp() {
         service = new ScoreServiceImpl();
+        ScoreGroupQueries queries = new ScoreGroupQueries(teacherScoreRecordMapper, studentFinalScoreMapper, studentMapper);
+        ScoreGroupSupport support = new ScoreGroupSupport(
+                teacherScoreRecordMapper,
+                studentFinalScoreMapper,
+                studentMapper,
+                largeGroupScoreMapper,
+                defenseGroupMapper,
+                defenseGroupTeacherMapper,
+                queries);
         ReflectionTestUtils.setField(service, "teacherScoreRecordMapper", teacherScoreRecordMapper);
         ReflectionTestUtils.setField(service, "studentFinalScoreMapper", studentFinalScoreMapper);
         ReflectionTestUtils.setField(service, "studentMapper", studentMapper);
+        ReflectionTestUtils.setField(service, "scoreGroupSupport", support);
     }
 
     @Test
@@ -47,27 +65,30 @@ class ScoreServiceImplAdjustmentTest {
         Student student1 = student(1L);
         Student student2 = student(2L);
         when(studentMapper.findByDefenseGroupId(9L)).thenReturn(List.of(student1, student2));
-        when(teacherScoreRecordMapper.findByStudentIdAndYear(1L, 2026)).thenReturn(List.of(score(80), score(100)));
-        when(teacherScoreRecordMapper.findByStudentIdAndYear(2L, 2026)).thenReturn(List.of(score(70), score(70)));
 
-        Map<Long, StudentFinalScore> finalScores = new HashMap<>();
-        finalScores.put(1L, finalScore(1L, 80, 85));
-        finalScores.put(2L, finalScore(2L, 75, 80));
-        when(studentFinalScoreMapper.findByStudentIdAndYear(anyLong(), eq(2026)))
-                .thenAnswer(invocation -> finalScores.get(invocation.getArgument(0)));
+        // Batch query for teacher scores (new code path)
+        when(teacherScoreRecordMapper.findByStudentIdsAndYear(anyList(), eq(2026)))
+                .thenReturn(List.of(score(1L, 80), score(1L, 100), score(2L, 70), score(2L, 70)));
+
+        // Batch query for final scores — returns existing records with advisor/reviewer
+        Map<Long, StudentFinalScore> existingFinalScores = new HashMap<>();
+        existingFinalScores.put(1L, finalScore(1L, 80, 85));
+        existingFinalScores.put(2L, finalScore(2L, 75, 80));
+        when(studentFinalScoreMapper.findByStudentIdsAndYear(anyList(), eq(2026)))
+                .thenReturn(List.of(existingFinalScores.get(1L), existingFinalScores.get(2L)));
 
         service.finalizeGroupScores(9L, 2026, 95);
 
-        assertEquals(90, finalScores.get(1L).getGroupAvgScore());
-        assertEquals(70, finalScores.get(2L).getGroupAvgScore());
-        assertEquals(1.056, finalScores.get(1L).getAdjustmentFactor());
-        assertEquals(1.056, finalScores.get(2L).getAdjustmentFactor());
-        assertEquals(95.04, finalScores.get(1L).getFinalDefenseScore());
-        assertEquals(73.92, finalScores.get(2L).getFinalDefenseScore());
-        assertEquals(87.5, finalScores.get(1L).getTotalGrade());
-        assertEquals(76.1, finalScores.get(2L).getTotalGrade());
-        assertEquals(95, finalScores.get(1L).getLargeGroupScore());
-        assertEquals(95, finalScores.get(2L).getLargeGroupScore());
+        assertEquals(90, existingFinalScores.get(1L).getGroupAvgScore());
+        assertEquals(70, existingFinalScores.get(2L).getGroupAvgScore());
+        assertEquals(1.056, existingFinalScores.get(1L).getAdjustmentFactor());
+        assertEquals(1.056, existingFinalScores.get(2L).getAdjustmentFactor());
+        assertEquals(95.0, existingFinalScores.get(1L).getFinalDefenseScore());
+        assertEquals(73.9, existingFinalScores.get(2L).getFinalDefenseScore());
+        assertEquals(87.5, existingFinalScores.get(1L).getTotalGrade());
+        assertEquals(76.1, existingFinalScores.get(2L).getTotalGrade());
+        assertEquals(95, existingFinalScores.get(1L).getLargeGroupScore());
+        assertEquals(95, existingFinalScores.get(2L).getLargeGroupScore());
     }
 
     private Student student(Long id) {
@@ -76,8 +97,9 @@ class ScoreServiceImplAdjustmentTest {
         return student;
     }
 
-    private TeacherScoreRecord score(int total) {
+    private TeacherScoreRecord score(Long studentId, int total) {
         TeacherScoreRecord record = new TeacherScoreRecord();
+        record.setStudentId(studentId);
         record.setTotalScore(total);
         return record;
     }
